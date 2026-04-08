@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "akademik105-auth",
+  "private_key_id": "fbee5b964d8868233ef6fdc75bd7766a1d7e8a9c",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCxMSgglG+mC+TA\nrojaHBg3c0fvrDCDOFiiVw8M9SIGtc/6Rs19yvAh7CZJF37mAKH+EI5cTr3DFFt5\n1oJPqJ4L/hGBiBM6Gm7BhvbUK0MWSJrZFAcIwXQGnYPOBA3W6sFQp3GnYf++nIKi\nRrdN3DBXPiPia0PlY9KiKFelBVnguTFGWAaBmd5Pt37mcXV/AAdnMkUmAKgS26zE\n6+VRx7DDQobp+BD0exP4orxC/ufKhgmNxglETlZvOVocnHu56QivG/zs8vvq2D6X\njkJ9QIKx/ONk/3h9+WYAcVKxC6ImmpuGuvgrchlz5nx7CAhMRii5MgYQEGfT/hfO\n8Dje5lulAgMBAAECggEAAN6glN3c+yFtNf3sKDJqMao15dn0hPo6WpBZ3v4mKiYN\nUWBOrL8/ktxvfna4At5+Lli5XQAN3zy8/6T8dZvm97Gzxt/ielq7/TrO+MvHVeel\np8RN3Fmn0E1gJWhL+3BJkUjYhuBoHYHPRV1NecCfBLU1eXrOytS7pW4VnWHplKQV\nYH6La1ft5JIIHCsVzdLpbaePVMfpq0mlwEzBmJMUDOzKv3BJlSQh9qFOKlHN1rAk\nV9FLAHsXR086zyNyFnAZ/E+llgLts8qEkfZMwf81fT67agj8jO6BhEPEfzINZ73A\nmK0Xf+By9oq/JOLBDnpE9xmlelcJxjJtb7ou+zsriQKBgQDgWRnLe0U3esxpbeMY\nIh8JzDgAf21VEZKJ5WHxgdsI716NVEUfZFVSb1lQeieKTaLUUU4E1yIT339zt8JL\nAnqdSyMUW+N10tD/Yfgkg/Bx6tIkAnmFtnctG6JMA5uU1IGADiN/Nvl3A758KEc1\nvDatiUihQhUAMGFDAGTz5GQ/3QKBgQDKMOVvO6/uaxt1LV/3+Vp7SN7/50zRL8nz\ns36VheFuASWRfMVG8ZuqR0sWGfVPFjDs+r9YbpO+ewB1Qe82G8NoAzOTCifw++lI\nnRialq8cDwpKFdvTSura+BkqZo4hfPOKd4UnH74ZTGe+mtCGzNeAPKaRv1BqGoVC\nGH7r1RsyaQKBgAmcx7YoOfb+k/OQecJ2881/qoaa7xxN/HFcGq42WiQv3WVAzxVh\nPyahDrqcAUWzvd5K/YTHkvY3BUb4AKMmIArNRVuB9GT/+2R11iP6Yzr+TLKuSHaq\nMsEEBhgrr2bZFBNgh7TTriyjRG4da6+puM4Gq838/tlbOU+dnLW2e3UhAoGAEhHW\nn19FNNiLpqg8eGvngzca/uHMArHzqXz0JibF48/kbKEq/FEhaVFfy4TcYIoKK1Op\ngBy5xX82pkQTPdGzX/tRQ6XXtfi9e4jWpxIqaiaJ898KO1LptFIR5bEuqJ2DIm/W\nDY4PrjEe4HDzi+iIpeRFuqbPZ/wgxqxrw2XTPWkCgYEAt9G8xNvUmcA80Vuzc/dz\n3Ei1ZIG/ChLTf1TU0kziryX3gf5hRv0SW2Vnu7+0f8BFup5BsbxbsyDx2+zEcU1l\nPg2G+DcpfBP+Gh2eywA0zjVpGPYmdG+VfEFTXZlwBkG+XLT9y1UR2G/7VjNRqYA3\nAae0AuduKEJG9OE6x85P6/M=\n-----END PRIVATE KEY-----\n",
+  "client_email": "akademik105-sheets@akademik105-auth.iam.gserviceaccount.com",
+  "client_id": "101353315012675536867",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/akademik105-sheets%40akademik105-auth.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

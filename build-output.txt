@@ -1,0 +1,55 @@
+﻿  Γû▓ Next.js 14.2.35
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/26) ...
+   Generating static pages (6/26) 
+   Generating static pages (12/26) 
+   Generating static pages (19/26) 
+ Γ£ô Generating static pages (26/26)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+Γöî Γùï /                                    153 B          87.4 kB
+Γö£ Γùï /_not-found                          873 B          88.1 kB
+Γö£ Γùï /admin                               176 B          96.1 kB
+Γö£ Γùï /admin/audit                         1.45 kB          97 kB
+Γö£ Γùï /admin/drives                        2.14 kB        97.7 kB
+Γö£ Γùï /admin/members                       1.9 kB         97.5 kB
+Γö£ Γùï /admin/settings                      2.16 kB        97.7 kB
+Γö£ Γùï /admin/users                         1.22 kB        96.8 kB
+Γö£ ╞Æ /api/admin/audit                     0 B                0 B
+Γö£ ╞Æ /api/admin/members                   0 B                0 B
+Γö£ ╞Æ /api/admin/members/[id]              0 B                0 B
+Γö£ ╞Æ /api/admin/members/bulk-approve      0 B                0 B
+Γö£ ╞Æ /api/admin/members/sync              0 B                0 B
+Γö£ ╞Æ /api/admin/settings                  0 B                0 B
+Γö£ ╞Æ /api/admin/users                     0 B                0 B
+Γö£ ╞Æ /api/admin/users/[id]                0 B                0 B
+Γö£ ╞Æ /api/auth/[...nextauth]              0 B                0 B
+Γö£ ╞Æ /api/files                           0 B                0 B
+Γö£ ╞Æ /api/files/[id]                      0 B                0 B
+Γö£ ╞Æ /api/files/[id]/download             0 B                0 B
+Γö£ ╞Æ /api/upload/complete                 0 B                0 B
+Γö£ ╞Æ /api/upload/init                     0 B                0 B
+Γö£ ╞Æ /file/[id]                           152 B          87.4 kB
+Γö£ Γùï /register                            176 B          96.1 kB
+Γö£ Γùï /rejected                            153 B          87.4 kB
+Γö£ Γùï /search                              2.42 kB          98 kB
+Γö£ Γùï /suspended                           153 B          87.4 kB
+Γö£ Γùï /upload                              3.04 kB        98.6 kB
+Γöö Γùï /waiting                             153 B          87.4 kB
++ First Load JS shared by all            87.3 kB
+  Γö£ chunks/117-9399329c3c2714b3.js       31.7 kB
+  Γö£ chunks/fd9d1056-0a69efe191542837.js  53.6 kB
+  Γöö other shared chunks (total)          1.89 kB
+
+
+╞Æ Middleware                             120 kB
+
+Γùï  (Static)   prerendered as static content
+╞Æ  (Dynamic)  server-rendered on demand
+

@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Neural Networks for Data Analysis | Academic Archive</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@700;800&amp;family=JetBrains+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed": "#a1f2de",
+                        "primary": "#091526",
+                        "surface-variant": "#e3e2e0",
+                        "error-container": "#ffdad6",
+                        "on-surface-variant": "#44474c",
+                        "primary-fixed-dim": "#bbc7dd",
+                        "inverse-surface": "#2f3130",
+                        "surface-container-highest": "#e3e2e0",
+                        "background": "#faf9f7",
+                        "primary-container": "#1e2a3b",
+                        "outline": "#75777d",
+                        "on-secondary-fixed": "#00201a",
+                        "on-error": "#ffffff",
+                        "secondary": "#086b5b",
+                        "secondary-container": "#9eefdc",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-container": "#d97706",
+                        "surface": "#faf9f7",
+                        "on-tertiary-fixed": "#2f1500",
+                        "on-secondary": "#ffffff",
+                        "tertiary-container": "#432000",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed": "#ffdcc3",
+                        "on-primary-fixed": "#101c2c",
+                        "secondary-fixed-dim": "#85d5c3",
+                        "tertiary": "#250f00",
+                        "surface-container": "#efeeec",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "on-secondary-container": "#126f60",
+                        "outline-variant": "#c5c6cd",
+                        "surface-bright": "#faf9f7",
+                        "inverse-on-surface": "#f1f1ef",
+                        "on-tertiary-fixed-variant": "#6e3900",
+                        "on-secondary-fixed-variant": "#005144",
+                        "surface-dim": "#dadad8",
+                        "tertiary-fixed-dim": "#ffb77d",
+                        "surface-container-low": "#f4f3f1",
+                        "primary-fixed": "#d7e3fa",
+                        "on-background": "#1a1c1b",
+                        "surface-container-high": "#e9e8e6",
+                        "on-error-container": "#93000a",
+                        "on-primary-container": "#8591a6",
+                        "on-primary-fixed-variant": "#3b475a",
+                        "inverse-primary": "#bbc7dd",
+                        "surface-tint": "#535f72"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-headline { font-family: 'Manrope', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+</head>
+<body class="bg-background text-on-surface antialiased">
+<!-- SideNavBar -->
+<aside class="h-screen w-64 fixed left-0 top-0 overflow-y-auto bg-[#faf9f7] border-r border-slate-200/50 flex flex-col py-6 z-50">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-sm" data-icon="account_balance">account_balance</span>
+</div>
+<div>
+<h1 class="text-xl font-bold text-[#091526] font-headline tracking-tight">Academic Archive</h1>
+<p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold">University Research</p>
+</div>
+</div>
+<nav class="flex-1 px-2 space-y-1">
+<a class="flex items-center text-[#086b5b] font-semibold border-l-4 border-[#086b5b] pl-4 py-3 bg-white/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="folder_open">folder_open</span>
+<span class="font-body text-sm">Browse</span>
+</a>
+<a class="flex items-center text-slate-500 pl-5 py-3 hover:bg-[#f1f0ee] hover:text-[#091526] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="search">search</span>
+<span class="font-body text-sm">Search</span>
+</a>
+<a class="flex items-center text-slate-500 pl-5 py-3 hover:bg-[#f1f0ee] hover:text-[#091526] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="upload_file">upload_file</span>
+<span class="font-body text-sm">Upload</span>
+</a>
+<a class="flex items-center text-slate-500 pl-5 py-3 hover:bg-[#f1f0ee] hover:text-[#091526] transition-colors duration-200" href="#">
+<span class="material-symbols-outlined mr-3" data-icon="admin_panel_settings">admin_panel_settings</span>
+<span class="font-body text-sm">Admin</span>
+</a>
+</nav>
+<div class="px-4 mt-8">
+<button class="w-full bg-secondary text-on-secondary py-3 px-4 rounded-xl font-medium text-sm flex items-center justify-center gap-2 hover:brightness-110 transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+                New Research Project
+            </button>
+</div>
+<div class="mt-auto px-4 pt-6 space-y-2">
+<div class="flex items-center gap-3 px-2 py-2 text-slate-500 hover:bg-[#f1f0ee] rounded-lg transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-sm" data-icon="storage">storage</span>
+<span class="font-mono text-[10px] tracking-tight">Drive A: 45GB</span>
+</div>
+<div class="flex items-center gap-3 px-2 py-2 text-slate-500 hover:bg-[#f1f0ee] rounded-lg transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-sm" data-icon="storage">storage</span>
+<span class="font-mono text-[10px] tracking-tight">Drive B: 12GB</span>
+</div>
+<div class="flex items-center gap-3 px-2 py-2 text-slate-500 hover:bg-[#f1f0ee] rounded-lg transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-sm" data-icon="storage">storage</span>
+<span class="font-mono text-[10px] tracking-tight">Drive C: 88GB</span>
+</div>
+</div>
+</aside>
+<!-- TopNavBar -->
+<header class="fixed top-0 right-0 w-[calc(100%-16rem)] z-40 bg-white/80 backdrop-blur-md border-b border-slate-200/50 shadow-sm flex justify-between items-center px-8 h-16">
+<div class="flex-1 flex items-center">
+<div class="relative w-full max-w-md group focus-within:ring-2 focus-within:ring-[#086b5b]/20 rounded-lg">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 text-xl" data-icon="search">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-lg text-sm focus:ring-0 placeholder:text-slate-400" placeholder="Search archive..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<button class="text-slate-600 hover:text-[#086b5b] transition-colors">
+<span class="material-symbols-outlined" data-icon="dark_mode">dark_mode</span>
+</button>
+<button class="text-slate-600 hover:text-[#086b5b] transition-colors relative">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-0 right-0 w-2 h-2 bg-error rounded-full border-2 border-white"></span>
+</button>
+<div class="flex items-center gap-3 border-l border-slate-200 pl-6">
+<img alt="Researcher Portrait" class="w-8 h-8 rounded-full object-cover ring-2 ring-surface-container-high" data-alt="portrait of a focused male researcher with glasses in a professional studio setting with soft neutral lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB1rl1bfgVIICCTvEd7hGXg4k6q7Ts-JuqTezjju7iSrZ3Tsbl8Ylj7JsKkHdWualYVII9rXUQ3hkGlcOMFtEGMOyY3XmXVRTdvlHbYTfeiyONqG5QidfsdFWIlFjh15hfMs1-Sdd0uXANmPvS-ztF86CtoEMhZq1IAHYebxsaTFz-JombZ-euyWgtel7Wyzv8zOPVLRPSCBRraud7ZICiWpwQL6vvXtlUFSEalaP1JAoMmfMyGkP6GfI6Qflq8NL8ky8E1Y0wjHGKs"/>
+<span class="text-sm font-medium text-primary">Dr. Henderson</span>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-24 pb-12 px-12 min-h-screen">
+<!-- Breadcrumb Tray -->
+<nav class="flex items-center gap-2 mb-10 text-[11px] font-medium tracking-wider text-on-surface-variant uppercase font-body">
+<a class="hover:text-secondary transition-colors" href="#">Browse</a>
+<span class="material-symbols-outlined text-[14px]" data-icon="chevron_right">chevron_right</span>
+<a class="hover:text-secondary transition-colors" href="#">Computer Science</a>
+<span class="material-symbols-outlined text-[14px]" data-icon="chevron_right">chevron_right</span>
+<span class="text-primary font-bold">Neural Networks for Data Analysis</span>
+</nav>
+<div class="grid grid-cols-12 gap-12">
+<!-- Left Column: Content & Metadata -->
+<div class="col-span-7">
+<h2 class="text-5xl font-extrabold text-primary font-headline leading-tight mb-8 tracking-tighter">
+                    Neural Networks for Data Analysis
+                </h2>
+<div class="bg-surface-container-low rounded-2xl p-8 mb-8">
+<div class="grid grid-cols-2 gap-y-6 gap-x-8">
+<div>
+<p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Subject</p>
+<p class="text-primary font-medium">Computer Science</p>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Tags</p>
+<div class="flex flex-wrap gap-2">
+<span class="bg-secondary-container text-on-secondary-container text-[10px] px-2 py-0.5 rounded font-mono font-bold uppercase tracking-tighter">AI</span>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] px-2 py-0.5 rounded font-mono font-bold uppercase tracking-tighter">Research</span>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] px-2 py-0.5 rounded font-mono font-bold uppercase tracking-tighter">2024</span>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] px-2 py-0.5 rounded font-mono font-bold uppercase tracking-tighter">Deep Learning</span>
+</div>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Authors</p>
+<p class="text-primary font-medium">Dr. Jane Smith, Prof. Robert Johnson</p>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Year</p>
+<p class="text-primary font-medium">2024</p>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">File Size</p>
+<p class="text-primary font-mono text-sm">4.2 MB</p>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Drive Location</p>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-slate-400" data-icon="database">database</span>
+<p class="text-primary font-mono text-sm">Drive A</p>
+</div>
+</div>
+<div class="col-span-2">
+<p class="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1">Upload Date</p>
+<p class="text-primary font-mono text-sm">May 12, 2024</p>
+</div>
+</div>
+</div>
+<div class="mb-10">
+<h3 class="text-xs uppercase tracking-widest text-slate-400 font-bold mb-4">Abstract</h3>
+<p class="text-on-surface leading-relaxed text-lg font-body max-w-2xl">
+                        A detailed exploration of neural network architectures and their application in large-scale data analysis for academic research. This paper focuses on the optimization of backpropagation algorithms in distributed computing environments, demonstrating significant improvements in training efficiency for multi-modal datasets.
+                    </p>
+</div>
+<div class="flex items-center gap-4">
+<button class="bg-secondary text-on-secondary px-8 py-4 rounded-xl font-bold flex items-center gap-3 hover:brightness-110 transition-all shadow-md">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+                        Download PDF
+                    </button>
+<button class="border border-outline-variant text-primary px-8 py-4 rounded-xl font-bold hover:bg-surface-container transition-all">
+                        Edit Metadata
+                    </button>
+<button class="p-4 text-slate-400 hover:text-error transition-colors">
+<span class="material-symbols-outlined" data-icon="delete">delete</span>
+</button>
+</div>
+</div>
+<!-- Right Column: PDF Preview -->
+<div class="col-span-5">
+<div class="sticky top-28">
+<div class="bg-surface-container rounded-2xl p-2 border border-outline-variant/10 shadow-xl overflow-hidden aspect-[3/4]">
+<div class="w-full h-full bg-white rounded-xl overflow-y-auto scrollbar-hide flex flex-col gap-4 p-8">
+<!-- Page 1 Placeholder -->
+<div class="min-h-full w-full bg-slate-50 rounded shadow-sm border border-slate-100 p-10 flex flex-col gap-4">
+<div class="w-2/3 h-6 bg-slate-200 rounded"></div>
+<div class="w-full h-4 bg-slate-100 rounded"></div>
+<div class="w-full h-4 bg-slate-100 rounded"></div>
+<div class="w-4/5 h-4 bg-slate-100 rounded"></div>
+<div class="w-full h-40 bg-slate-100 rounded-lg mt-4 flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-300 text-4xl" data-icon="schema">schema</span>
+</div>
+<div class="w-full h-4 bg-slate-100 rounded mt-4"></div>
+<div class="w-full h-4 bg-slate-100 rounded"></div>
+<div class="w-2/3 h-4 bg-slate-100 rounded"></div>
+</div>
+<!-- Page 2 Placeholder -->
+<div class="min-h-full w-full bg-slate-50 rounded shadow-sm border border-slate-100 p-10 flex flex-col gap-4 opacity-50">
+<div class="w-1/2 h-6 bg-slate-200 rounded"></div>
+<div class="w-full h-4 bg-slate-100 rounded"></div>
+<div class="w-full h-4 bg-slate-100 rounded"></div>
+<div class="w-full h-4 bg-slate-100 rounded"></div>
+<div class="w-full h-4 bg-slate-100 rounded"></div>
+</div>
+</div>
+<!-- Preview Controls (Glassmorphic) -->
+<div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-white/60 backdrop-blur-xl border border-white/20 px-6 py-3 rounded-full shadow-2xl">
+<button class="hover:text-secondary transition-colors"><span class="material-symbols-outlined" data-icon="zoom_out">zoom_out</span></button>
+<span class="text-xs font-mono font-bold text-slate-600">100%</span>
+<button class="hover:text-secondary transition-colors"><span class="material-symbols-outlined" data-icon="zoom_in">zoom_in</span></button>
+<div class="w-px h-4 bg-slate-300 mx-2"></div>
+<button class="hover:text-secondary transition-colors"><span class="material-symbols-outlined" data-icon="fullscreen">fullscreen</span></button>
+</div>
+</div>
+<div class="mt-4 flex justify-between items-center px-2">
+<p class="text-[10px] text-slate-400 font-mono tracking-wider uppercase">Document Preview (2/24 Pages)</p>
+<button class="text-xs text-secondary font-bold flex items-center gap-1 hover:underline">
+                            View Fullscreen
+                            <span class="material-symbols-outlined text-sm" data-icon="open_in_new">open_in_new</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Related Files (Asymmetric Grid) -->
+<section class="mt-24">
+<h3 class="text-2xl font-bold font-headline text-primary mb-8">Related Research</h3>
+<div class="grid grid-cols-4 gap-6">
+<!-- Related Card 1 -->
+<div class="col-span-2 bg-surface-container-low p-6 rounded-2xl hover:bg-white hover:shadow-xl transition-all border border-transparent hover:border-outline-variant/10 cursor-pointer group">
+<div class="flex justify-between items-start mb-4">
+<span class="material-symbols-outlined text-secondary" data-icon="article">article</span>
+<span class="text-[10px] font-mono text-slate-400 uppercase">.PDF</span>
+</div>
+<h4 class="font-bold text-primary mb-2 group-hover:text-secondary transition-colors">Advanced Stochastic Gradient Descent in Large Clusters</h4>
+<p class="text-xs text-slate-500 mb-4 line-clamp-2">Exploration of hardware-aware SGD variants for distributed deep learning systems.</p>
+<div class="flex items-center gap-3">
+<div class="w-6 h-6 rounded-full bg-primary-fixed flex items-center justify-center text-[10px] font-bold text-primary">RH</div>
+<span class="text-[10px] text-slate-400 font-medium">Robert Henderson • 2023</span>
+</div>
+</div>
+<!-- Related Card 2 -->
+<div class="bg-surface-container-low p-6 rounded-2xl hover:bg-white hover:shadow-xl transition-all border border-transparent hover:border-outline-variant/10 cursor-pointer group">
+<div class="flex justify-between items-start mb-4">
+<span class="material-symbols-outlined text-secondary" data-icon="analytics">analytics</span>
+<span class="text-[10px] font-mono text-slate-400 uppercase">.CSV</span>
+</div>
+<h4 class="font-bold text-primary mb-2 group-hover:text-secondary transition-colors">Neural Performance Metrics</h4>
+<p class="text-xs text-slate-500 mb-4 line-clamp-2">Raw benchmarks for transformer-based models on NVIDIA H100.</p>
+<div class="flex items-center gap-2">
+<span class="text-[10px] text-slate-400 font-mono">1.2 GB</span>
+</div>
+</div>
+<!-- Related Card 3 -->
+<div class="bg-surface-container-low p-6 rounded-2xl hover:bg-white hover:shadow-xl transition-all border border-transparent hover:border-outline-variant/10 cursor-pointer group">
+<div class="flex justify-between items-start mb-4">
+<span class="material-symbols-outlined text-secondary" data-icon="description">description</span>
+<span class="text-[10px] font-mono text-slate-400 uppercase">.MD</span>
+</div>
+<h4 class="font-bold text-primary mb-2 group-hover:text-secondary transition-colors">Lab Notes: Epoch 500</h4>
+<p class="text-xs text-slate-500 mb-4 line-clamp-2">Observational data on gradient explosion during extended training cycles.</p>
+<div class="flex items-center gap-2">
+<span class="text-[10px] text-slate-400 font-mono">12 KB</span>
+</div>
+</div>
+</div>
+</section>
+</main>
+</body></html>

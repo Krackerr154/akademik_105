@@ -1,0 +1,85 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        /* Surface Hierarchy */
+        --surface: #faf9f7;
+        --surface-container-lowest: #ffffff;
+        --surface-container-low: #f4f3f1;
+        --surface-container-high: #e9e8e6;
+        --surface-container-highest: #e3e2e0;
+
+        /* Core palette */
+        --primary: #091526;
+        --primary-fixed: #d7e3fa;
+        --secondary: #086b5b;
+        --secondary-container: #9eefdc;
+        --on-secondary: #ffffff;
+        --on-secondary-container: #126f60;
+        --on-surface: #1a1c1b;
+        --outline-variant: #c5c6cd;
+
+        /* Status */
+        --tertiary-fixed-dim: #ffb77d;
+        --error: #ba1a1a;
+        --success: #086b5b;
+    }
+
+    html {
+        font-family: "Inter", system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+        @apply bg-surface text-on-surface;
+    }
+
+    /* Manrope for display / headlines — negative letter-spacing for editorial feel */
+    h1,
+    h2,
+    h3 {
+        font-family: "Manrope", system-ui, sans-serif;
+        letter-spacing: -0.02em;
+    }
+}
+
+@layer components {
+
+    /* Glassmorphism — for floating menus, search bars */
+    .glass {
+        @apply bg-surface-container-lowest/80 backdrop-blur-[12px];
+    }
+
+    /* Ghost Border — subtle container suggestion (15% opacity) */
+    .ghost-border {
+        box-shadow: inset 0 0 0 1px rgba(197, 198, 205, 0.15);
+    }
+
+    /* Ghost Border on focus — teal, 20% opacity */
+    .ghost-border-focus {
+        box-shadow: inset 0 0 0 1px rgba(8, 107, 91, 0.2);
+    }
+
+    /* Ambient shadow — paper-like depth */
+    .shadow-ambient {
+        box-shadow: 0 4px 24px 0 rgba(26, 28, 27, 0.04);
+    }
+
+    /* Teal CTA gradient */
+    .gradient-cta {
+        background: linear-gradient(15deg, #086b5b, #126f60);
+    }
+}
+
+@layer utilities {
+
+    /* No-Line Rule enforcement — hide standard borders */
+    .no-line {
+        border: none !important;
+    }
+}

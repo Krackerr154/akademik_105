@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Academic Archive | Browse Research</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed": "#a1f2de",
+                        "primary": "#091526",
+                        "surface-variant": "#e3e2e0",
+                        "error-container": "#ffdad6",
+                        "on-surface-variant": "#44474c",
+                        "primary-fixed-dim": "#bbc7dd",
+                        "inverse-surface": "#2f3130",
+                        "surface-container-highest": "#e3e2e0",
+                        "background": "#faf9f7",
+                        "primary-container": "#1e2a3b",
+                        "outline": "#75777d",
+                        "on-secondary-fixed": "#00201a",
+                        "on-error": "#ffffff",
+                        "secondary": "#086b5b",
+                        "secondary-container": "#9eefdc",
+                        "on-tertiary": "#ffffff",
+                        "on-tertiary-container": "#d97706",
+                        "surface": "#faf9f7",
+                        "on-tertiary-fixed": "#2f1500",
+                        "on-secondary": "#ffffff",
+                        "tertiary-container": "#432000",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed": "#ffdcc3",
+                        "on-primary-fixed": "#101c2c",
+                        "secondary-fixed-dim": "#85d5c3",
+                        "tertiary": "#250f00",
+                        "surface-container": "#efeeec",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "on-secondary-container": "#126f60",
+                        "outline-variant": "#c5c6cd",
+                        "surface-bright": "#faf9f7",
+                        "inverse-on-surface": "#f1f1ef",
+                        "on-tertiary-fixed-variant": "#6e3900",
+                        "on-secondary-fixed-variant": "#005144",
+                        "surface-dim": "#dadad8",
+                        "tertiary-fixed-dim": "#ffb77d",
+                        "surface-container-low": "#f4f3f1",
+                        "primary-fixed": "#d7e3fa",
+                        "on-background": "#1a1c1b",
+                        "surface-container-high": "#e9e8e6",
+                        "on-error-container": "#93000a",
+                        "on-primary-container": "#8591a6",
+                        "on-primary-fixed-variant": "#3b475a",
+                        "inverse-primary": "#bbc7dd",
+                        "surface-tint": "#535f72"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "label": ["Inter", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3 { font-family: 'Manrope', sans-serif; }
+        .metadata { font-family: 'JetBrains Mono', monospace; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen">
+<!-- SideNavBar Component -->
+<aside class="bg-[#faf9f7] dark:bg-slate-900 h-screen w-64 fixed left-0 top-0 overflow-y-auto flex flex-col py-6 border-r border-slate-200/50 dark:border-slate-800 z-50">
+<div class="px-6 mb-8">
+<div class="flex items-center gap-3 mb-6">
+<div class="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined">folder_open</span>
+</div>
+<div>
+<h1 class="text-xl font-bold text-[#091526] dark:text-white leading-tight">Academic Archive</h1>
+<p class="text-[10px] uppercase tracking-widest text-on-primary-container font-semibold">University Research</p>
+</div>
+</div>
+<button class="w-full bg-secondary text-on-secondary py-3 px-4 rounded-lg font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-all scale-95 duration-150 ease-in-out">
+<span class="material-symbols-outlined text-sm">add</span>
+                New Research Project
+            </button>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="text-[#086b5b] dark:text-[#5eead4] font-semibold border-l-4 border-[#086b5b] dark:border-[#5eead4] pl-4 py-3 bg-white/50 dark:bg-slate-800/50 flex items-center gap-4 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">folder_open</span>
+                Browse
+            </a>
+<a class="text-slate-500 dark:text-slate-400 pl-5 py-3 hover:text-[#091526] dark:hover:text-white flex items-center gap-4 hover:bg-[#f1f0ee] dark:hover:bg-slate-800 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">search</span>
+                Search
+            </a>
+<a class="text-slate-500 dark:text-slate-400 pl-5 py-3 hover:text-[#091526] dark:hover:text-white flex items-center gap-4 hover:bg-[#f1f0ee] dark:hover:bg-slate-800 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">upload_file</span>
+                Upload
+            </a>
+<a class="text-slate-500 dark:text-slate-400 pl-5 py-3 hover:text-[#091526] dark:hover:text-white flex items-center gap-4 hover:bg-[#f1f0ee] dark:hover:bg-slate-800 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">admin_panel_settings</span>
+                Admin
+            </a>
+</nav>
+<div class="mt-auto px-6 space-y-4 pt-6 border-t border-slate-100/50 dark:border-slate-800/50">
+<div>
+<div class="flex justify-between text-[11px] font-mono text-slate-500 mb-1">
+<span>Drive A: 12.5GB</span>
+<span>15GB</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-secondary" style="width: 83%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-[11px] font-mono text-slate-500 mb-1">
+<span>Drive B: 3.2GB</span>
+<span>15GB</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-secondary" style="width: 21%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-[11px] font-mono text-slate-500 mb-1">
+<span>Drive C: 9.8GB</span>
+<span>15GB</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-secondary" style="width: 65%"></div>
+</div>
+</div>
+</div>
+</aside>
+<!-- TopNavBar Component -->
+<header class="fixed top-0 right-0 w-[calc(100%-16rem)] z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800 flex justify-between items-center px-8 h-16 shadow-sm dark:shadow-none">
+<div class="flex-1 max-w-xl">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-secondary transition-colors">search</span>
+<input class="w-full bg-surface-container-low border-none rounded-full pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-[#086b5b]/20 transition-all outline-none" placeholder="Search archive for research papers, data sets..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<button class="text-slate-600 dark:text-slate-400 hover:text-[#086b5b] dark:hover:text-[#5eead4] transition-colors">
+<span class="material-symbols-outlined">dark_mode</span>
+</button>
+<button class="text-slate-600 dark:text-slate-400 hover:text-[#086b5b] dark:hover:text-[#5eead4] transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-0 right-0 w-2 h-2 bg-tertiary-fixed-dim rounded-full"></span>
+</button>
+<div class="h-8 w-[1px] bg-slate-200 dark:bg-slate-800"></div>
+<div class="flex items-center gap-3">
+<div class="text-right">
+<p class="text-sm font-semibold text-primary dark:text-white leading-none">Dr. Aris Thorne</p>
+<p class="text-[11px] text-slate-500 font-medium">Senior Researcher</p>
+</div>
+<img alt="Academic Researcher" class="w-10 h-10 rounded-full object-cover ring-2 ring-surface-container-high" data-alt="Close-up portrait of a professional academic researcher in a library setting with soft natural window lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBDViLLfSBDCSqMRXEDroI9LFaYQoJxWSqv2hKOhWwrpV89HmZr_Kh7qsbGMC-q7bvN2iBpZXOlX-isPXEv-8zaFq_9t6icmbyj_oy2MRm1mr2T7rI-8ns97n3yRlqOQTJ_JUmcDY-Kce6n3ZRwrtFKeQ3E3Eqsalhis7WvLJxRsiq28zlJjCftxb_CNVVHYYFQwU50d4XqfQofcIlWDDuU7c9kmn3s0DesZZ_RQct-DOHQHDY3-0ifFiBtX0CXn800cQzYHJOgX_nb"/>
+</div>
+</div>
+</header>
+<!-- Main Content Stage -->
+<main class="ml-64 pt-16 p-8 min-h-screen">
+<!-- Breadcrumb & Header -->
+<div class="mb-8">
+<nav class="flex items-center gap-2 text-[11px] font-medium text-on-primary-container uppercase tracking-widest mb-4">
+<span>Archive</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-secondary">Browse files</span>
+</nav>
+<div class="flex justify-between items-end">
+<div>
+<h2 class="text-4xl font-extrabold text-primary tracking-tight mb-2">Research Repository</h2>
+<p class="text-on-surface-variant max-w-2xl">Access curated scholarly documents, empirical datasets, and peer-reviewed drafts across multiple scientific disciplines.</p>
+</div>
+<div class="flex gap-2">
+<button class="p-2 rounded-lg bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined">grid_view</span>
+</button>
+<button class="p-2 rounded-lg bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined">list</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Filters Strip -->
+<div class="bg-surface-container-low rounded-xl p-4 flex flex-wrap items-center gap-4 mb-10 shadow-sm">
+<div class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-transparent focus-within:border-secondary/20 transition-all">
+<span class="text-xs font-semibold text-slate-400 uppercase tracking-tighter">Subject:</span>
+<select class="bg-transparent border-none text-sm font-medium focus:ring-0 p-0 pr-8 cursor-pointer">
+<option>All Subjects</option>
+<option>Computer Science</option>
+<option>Physics</option>
+<option>Biology</option>
+</select>
+</div>
+<div class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-transparent focus-within:border-secondary/20 transition-all">
+<span class="text-xs font-semibold text-slate-400 uppercase tracking-tighter">Format:</span>
+<select class="bg-transparent border-none text-sm font-medium focus:ring-0 p-0 pr-8 cursor-pointer">
+<option>Any File Type</option>
+<option>PDF</option>
+<option>DOCX</option>
+<option>XLSX</option>
+<option>PPTX</option>
+</select>
+</div>
+<div class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border border-transparent focus-within:border-secondary/20 transition-all">
+<span class="text-xs font-semibold text-slate-400 uppercase tracking-tighter">Year:</span>
+<select class="bg-transparent border-none text-sm font-medium focus:ring-0 p-0 pr-8 cursor-pointer">
+<option>2020-2024</option>
+<option>2024</option>
+<option>2023</option>
+<option>2022</option>
+</select>
+</div>
+<div class="ml-auto flex items-center gap-2">
+<span class="text-xs font-semibold text-slate-400 uppercase tracking-tighter">Sort by:</span>
+<button class="flex items-center gap-1 text-sm font-semibold text-secondary">
+                    Newest First
+                    <span class="material-symbols-outlined text-sm">keyboard_arrow_down</span>
+</button>
+</div>
+</div>
+<!-- File Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+<!-- Card 1 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/10 hover:shadow-xl hover:shadow-primary/5 transition-all group flex flex-col h-full">
+<div class="flex justify-between items-start mb-4">
+<div class="w-12 h-12 rounded-lg bg-error-container flex items-center justify-center text-on-error-container">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">picture_as_pdf</span>
+</div>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Computer Science</span>
+</div>
+<h3 class="text-lg font-bold text-primary mb-2 line-clamp-2 leading-snug group-hover:text-secondary transition-colors">Neural Networks for Data Analysis</h3>
+<div class="flex flex-wrap gap-2 mb-6">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-semibold px-2 py-0.5 rounded-full">AI</span>
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-semibold px-2 py-0.5 rounded-full">Research</span>
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-semibold px-2 py-0.5 rounded-full">2024</span>
+</div>
+<div class="mt-auto space-y-4">
+<div class="flex items-center justify-between text-[11px] text-slate-500 font-mono">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">attachment</span>
+                            4.2 MB
+                        </div>
+<div>May 12, 2024</div>
+</div>
+<div class="flex items-center justify-between pt-4 border-t border-slate-50">
+<div class="flex items-center gap-2">
+<img class="w-6 h-6 rounded-full object-cover" data-alt="Close-up portrait of a male professor wearing glasses in a professional studio setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBXASr9e01khXLrcxDVIWlK18P3BorxJBznqQqasoQRjpzIPT0M1TuUCnI90__OmLz66IY4QWb6nEjlENqK8NSoTMh_ymfe7yCghOXq5jjsh2Dp1GOTNYNHBfs9HQ1kMARVoXeygFeQCqX75xUVEZ6uAQfCs41PJHhOoqV2CsRo4aY_W2Ha0692k2pqCE08duSZgcyD7jmZp7DbpS-WG7rz--7FLyoGwxZHH8-bMrYNqQNvZb93emeaX7pFMECZfRPoc6sh4DNM6xpA"/>
+<span class="text-[11px] font-medium text-slate-600">Dr. Julian V.</span>
+</div>
+<button class="bg-secondary text-on-secondary p-2 rounded-lg hover:scale-105 active:scale-95 transition-transform flex items-center">
+<span class="material-symbols-outlined text-sm">download</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/10 hover:shadow-xl hover:shadow-primary/5 transition-all group flex flex-col h-full">
+<div class="flex justify-between items-start mb-4">
+<div class="w-12 h-12 rounded-lg bg-primary-fixed text-on-primary-fixed-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">description</span>
+</div>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Physics</span>
+</div>
+<h3 class="text-lg font-bold text-primary mb-2 line-clamp-2 leading-snug group-hover:text-secondary transition-colors">Quantum Physics: Theory and Practice</h3>
+<div class="flex flex-wrap gap-2 mb-6">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-semibold px-2 py-0.5 rounded-full">Quantum</span>
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-semibold px-2 py-0.5 rounded-full">Draft</span>
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-semibold px-2 py-0.5 rounded-full">2023</span>
+</div>
+<div class="mt-auto space-y-4">
+<div class="flex items-center justify-between text-[11px] text-slate-500 font-mono">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">attachment</span>
+                            1.5 MB
+                        </div>
+<div>Jan 20, 2024</div>
+</div>
+<div class="flex items-center justify-between pt-4 border-t border-slate-50">
+<div class="flex items-center gap-2">
+<img class="w-6 h-6 rounded-full object-cover" data-alt="Portrait of a young woman researcher in a minimalist bright office environment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC_CR0ZnHYXbbsjSvZLAAT6xf3w1AJoY1AzkNt0DIX8ZkKOYePeeU9oL2eVb5_ljtkpCL0DwGdEYkIsYepSUy6PsAJemVt3alxieEBcDMSgep7Z0lcxzA4ObM60B05hpE3Crflbhe-lYfMbXtLSKo-AY5UdkPjyq-32xDHbeZxd-3PBTMnploiMIXJnj-WVZVVXSVN8VA8RcJueGUa7BXj8jK1YQcHQaKliNb9k9Q8KTWHWHUu46DkfpBo1bzzWY1Wg4ZY9UioJOCKo"/>
+<span class="text-[11px] font-medium text-slate-600">Sarah Jenkins</span>
+</div>
+<button class="bg-secondary text-on-secondary p-2 rounded-lg hover:scale-105 active:scale-95 transition-transform flex items-center">
+<span class="material-symbols-outlined text-sm">download</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/10 hover:shadow-xl hover:shadow-primary/5 transition-all group flex flex-col h-full">
+<div class="flex justify-between items-start mb-4">
+<div class="w-12 h-12 rounded-lg bg-secondary-container text-on-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">table_chart</span>
+</div>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Biology</span>
+</div>
+<h3 class="text-lg font-bold text-primary mb-2 line-clamp-2 leading-snug group-hover:text-secondary transition-colors">Biodiversity Data Set 2023</h3>
+<div class="flex flex-wrap gap-2 mb-6">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-semibold px-2 py-0.5 rounded-full">Data</span>
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-semibold px-2 py-0.5 rounded-full">Ecology</span>
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-semibold px-2 py-0.5 rounded-full">Raw</span>
+</div>
+<div class="mt-auto space-y-4">
+<div class="flex items-center justify-between text-[11px] text-slate-500 font-mono">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">attachment</span>
+                            12.8 MB
+                        </div>
+<div>Nov 15, 2023</div>
+</div>
+<div class="flex items-center justify-between pt-4 border-t border-slate-50">
+<div class="flex items-center gap-2">
+<img class="w-6 h-6 rounded-full object-cover" data-alt="Portrait of a male scientist in a clean laboratory background with soft lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBegCUZdW76adcX_J2tlwj4D556OroUTnVEETJ7N4WH52yfIcH0Z8QU1XvID5Qwq2c8gy5WPU461Jc2vfxq-owLZWe9FCrj7Dk-983znR_8fg3sUqj9v9ZQjuM7GKo-K3csAwIWPcHCM0ysRczc7UZEHFy4xe0HKqPS_pSZ_ZT4uy_QL6INJwjcDeu6AGQzEVdTm2acTLf65RVs_mFuA03-hGxQRpIVEUxfgywopsQ4GVa32t3qzxZsgTG-5irI2fG3cJ2MC73EvNk0"/>
+<span class="text-[11px] font-medium text-slate-600">Mark Chen</span>
+</div>
+<button class="bg-secondary text-on-secondary p-2 rounded-lg hover:scale-105 active:scale-95 transition-transform flex items-center">
+<span class="material-symbols-outlined text-sm">download</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/10 hover:shadow-xl hover:shadow-primary/5 transition-all group flex flex-col h-full">
+<div class="flex justify-between items-start mb-4">
+<div class="w-12 h-12 rounded-lg bg-error-container flex items-center justify-center text-on-error-container">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">picture_as_pdf</span>
+</div>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Economics</span>
+</div>
+<h3 class="text-lg font-bold text-primary mb-2 line-clamp-2 leading-snug group-hover:text-secondary transition-colors">Thesis on Macroeconomics</h3>
+<div class="flex flex-wrap gap-2 mb-6">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-semibold px-2 py-0.5 rounded-full">Thesis</span>
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-semibold px-2 py-0.5 rounded-full">Finance</span>
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-semibold px-2 py-0.5 rounded-full">Final</span>
+</div>
+<div class="mt-auto space-y-4">
+<div class="flex items-center justify-between text-[11px] text-slate-500 font-mono">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">attachment</span>
+                            8.9 MB
+                        </div>
+<div>Mar 05, 2024</div>
+</div>
+<div class="flex items-center justify-between pt-4 border-t border-slate-50">
+<div class="flex items-center gap-2">
+<img class="w-6 h-6 rounded-full object-cover" data-alt="Portrait of a professional woman wearing a blazer in a modern corporate academic setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuALxRmttVagmIbLWndXJi4iA8OIO52q1T_ufSndcZ_aVqvFNQnodaTrciqLJIYuHb06FmmsuSDAcfLaL95bIGlpONPQe24OvQTBTtchfdZdZ7Abz3-3W445HOyBoTJXXqwPL7pHOqQGmKAt0xcIXDljbf5RzhCtsEv5PyjB-MFHOdHKEMCFc2WRttssxP4JhK53I2IlfZJfaY7L9DtesHkWhIAxjOxkZVCLr1RNmAqXIvIH38MwD2pshFFAsxZi9gbD5wmonpXwYb0n"/>
+<span class="text-[11px] font-medium text-slate-600">Elena Petrov</span>
+</div>
+<button class="bg-secondary text-on-secondary p-2 rounded-lg hover:scale-105 active:scale-95 transition-transform flex items-center">
+<span class="material-symbols-outlined text-sm">download</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 5 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/10 hover:shadow-xl hover:shadow-primary/5 transition-all group flex flex-col h-full">
+<div class="flex justify-between items-start mb-4">
+<div class="w-12 h-12 rounded-lg bg-tertiary-fixed text-on-tertiary-fixed-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">co_present</span>
+</div>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Environmental</span>
+</div>
+<h3 class="text-lg font-bold text-primary mb-2 line-clamp-2 leading-snug group-hover:text-secondary transition-colors">Sustainable Energy Solutions</h3>
+<div class="flex flex-wrap gap-2 mb-6">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-semibold px-2 py-0.5 rounded-full">Energy</span>
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-semibold px-2 py-0.5 rounded-full">Slides</span>
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-semibold px-2 py-0.5 rounded-full">Solar</span>
+</div>
+<div class="mt-auto space-y-4">
+<div class="flex items-center justify-between text-[11px] text-slate-500 font-mono">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">attachment</span>
+                            15.2 MB
+                        </div>
+<div>Apr 10, 2024</div>
+</div>
+<div class="flex items-center justify-between pt-4 border-t border-slate-50">
+<div class="flex items-center gap-2">
+<img class="w-6 h-6 rounded-full object-cover" data-alt="Portrait of a man with a beard looking thoughtful in an outdoor campus setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxXKoBfx7gPbIzdLu3OoQRcLVRHOlBY-Zin48W9H5uyjvRBgFmFkLn_DzZMi-494r38Nb446T_7NAgvPRXkRPtQ5aA41Go-ENRC0TJTUx0auMm_vxpNDpUg5GsaZofa38W2qV1I06u_GW0l96nFk3DWCo3xH56TSNcdZ2NjtfdS1eZ_0XTIttUQFmniT9mnVilqxll42JrGpsyiLJcIKf9xFyMhrT6m8SD0bpQuuo4WQqASRRHGswxn-MryTqp-MDGsvjr9dDhii3a"/>
+<span class="text-[11px] font-medium text-slate-600">David G.</span>
+</div>
+<button class="bg-secondary text-on-secondary p-2 rounded-lg hover:scale-105 active:scale-95 transition-transform flex items-center">
+<span class="material-symbols-outlined text-sm">download</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 6 -->
+<div class="bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/10 hover:shadow-xl hover:shadow-primary/5 transition-all group flex flex-col h-full">
+<div class="flex justify-between items-start mb-4">
+<div class="w-12 h-12 rounded-lg bg-error-container flex items-center justify-center text-on-error-container">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">picture_as_pdf</span>
+</div>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">Computer Science</span>
+</div>
+<h3 class="text-lg font-bold text-primary mb-2 line-clamp-2 leading-snug group-hover:text-secondary transition-colors">Machine Learning Ethics</h3>
+<div class="flex flex-wrap gap-2 mb-6">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-semibold px-2 py-0.5 rounded-full">Ethics</span>
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-semibold px-2 py-0.5 rounded-full">AI</span>
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-semibold px-2 py-0.5 rounded-full">Policy</span>
+</div>
+<div class="mt-auto space-y-4">
+<div class="flex items-center justify-between text-[11px] text-slate-500 font-mono">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">attachment</span>
+                            2.1 MB
+                        </div>
+<div>Jun 01, 2024</div>
+</div>
+<div class="flex items-center justify-between pt-4 border-t border-slate-50">
+<div class="flex items-center gap-2">
+<img class="w-6 h-6 rounded-full object-cover" data-alt="Professional studio portrait of a young woman academic looking confident" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC3LTqFHsOQ3CkdstSIjWP4ukrF4ALgx-MCa8yY2rJ8YB2t-f9ZUt88wDkbp-ggw-BwflJx0cyUppEA_CQZPlcQyXJRhWbgyL2XRxAbJCjrBf_4_ozg3gjWTeTFJaQNGbY83UBHAgJ-8ex8rMwaRCmgq3RpglsTfNy-ZecjibejKjmngGCjhteFLQ3R9qTYKcd6iIIruwKuUMASrEqUdOHZlwwe693DF3qOUEw96HSDlvH8A3fBy9KKPVVUapV_quwU4tYhiuHwBoFa"/>
+<span class="text-[11px] font-medium text-slate-600">Sophia Lane</span>
+</div>
+<button class="bg-secondary text-on-secondary p-2 rounded-lg hover:scale-105 active:scale-95 transition-transform flex items-center">
+<span class="material-symbols-outlined text-sm">download</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Pagination -->
+<div class="flex items-center justify-center gap-2 mt-8 pb-12">
+<button class="w-10 h-10 rounded-lg flex items-center justify-center text-slate-400 hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="w-10 h-10 rounded-lg flex items-center justify-center bg-secondary text-on-secondary font-bold">1</button>
+<button class="w-10 h-10 rounded-lg flex items-center justify-center text-on-surface hover:bg-surface-container-high transition-colors">2</button>
+<button class="w-10 h-10 rounded-lg flex items-center justify-center text-on-surface hover:bg-surface-container-high transition-colors">3</button>
+<span class="px-2 text-slate-400">...</span>
+<button class="w-10 h-10 rounded-lg flex items-center justify-center text-on-surface hover:bg-surface-container-high transition-colors">10</button>
+<button class="w-10 h-10 rounded-lg flex items-center justify-center text-slate-400 hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</main>
+</body></html>

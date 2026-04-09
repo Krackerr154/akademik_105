@@ -172,35 +172,26 @@ Default nama tab adalah `Form Responses 1`. Catat ini — akan dimasukkan ke set
 
 ### Langkah 5.1 — Buat Akun Turso
 
-1. Buka [turso.tech](https://turso.tech) → daftar (gratis)
-2. Install Turso CLI:
-   ```bash
-   curl -sSfL https://get.tur.so/install.sh | bash
-   ```
-3. Login:
-   ```bash
-   turso auth login
-   ```
+1. Buka [turso.tech](https://turso.tech) → klik **Sign Up** (gratis)
+2. Bisa daftar dengan GitHub atau Google
 
-### Langkah 5.2 — Buat Database
+### Langkah 5.2 — Buat Database via Dashboard
 
-```bash
-turso db create akademik105
-```
+1. Buka [app.turso.tech](https://app.turso.tech) → login
+2. Klik **Create Database**
+3. Nama database: `akademik105`
+4. Pilih region terdekat (contoh: `sin` untuk Singapore)
+5. Klik **Create**
 
 ### Langkah 5.3 — Ambil Credentials
 
-```bash
-# Database URL
-turso db show akademik105 --url
+1. Di dashboard, klik database `akademik105` yang baru dibuat
+2. Copy **Database URL** (format: `libsql://akademik105-username.turso.io`)
+   → Ini adalah `TURSO_DATABASE_URL`
+3. Klik **Create Token** (atau **Generate Token**) → copy token yang muncul
+   → Ini adalah `TURSO_AUTH_TOKEN`
 
-# Auth token
-turso db tokens create akademik105
-```
-
-Catat keduanya:
-- Database URL → `TURSO_DATABASE_URL`
-- Auth token → `TURSO_AUTH_TOKEN`
+> **Catatan:** Turso CLI hanya tersedia untuk macOS dan Linux (atau Windows via WSL). Untuk pengguna Windows, gunakan dashboard web di atas. Jika ingin menggunakan CLI, install WSL terlebih dahulu (`wsl --install` di PowerShell).
 
 ---
 
@@ -231,26 +222,26 @@ Di **Settings → Environment Variables**, tambahkan semua variabel berikut:
 # Auth
 NEXTAUTH_SECRET          → Generate: openssl rand -base64 32
 NEXTAUTH_URL             → https://akademik105.vercel.app (update setelah deploy pertama)
-GOOGLE_CLIENT_ID         → Dari Bagian 2
-GOOGLE_CLIENT_SECRET     → Dari Bagian 2
+GOOGLE_CLIENT_ID         → 320960239118-fq5cg9qfva1rq1var0bveua1ejk69h9v.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET     → (dari cred/OAuth_cred.json → client_secret)
 
-# Database
-TURSO_DATABASE_URL       → Dari Bagian 5
-TURSO_AUTH_TOKEN         → Dari Bagian 5
+# Database (Turso)
+TURSO_DATABASE_URL       → libsql://akademik105-krackerr154.aws-ap-northeast-1.turso.io
+TURSO_AUTH_TOKEN          → (dari cred/turso_cred.md)
 
 # Google Drive — Akun A
-GDRIVE_A_CLIENT_EMAIL    → Dari Bagian 1 (Akun A)
-GDRIVE_A_PRIVATE_KEY     → Dari Bagian 1 (Akun A)
-GDRIVE_A_FOLDER_ID       → Dari Bagian 1 (Akun A)
+GDRIVE_A_CLIENT_EMAIL    → akademik105-storage@akademik105-drive-a.iam.gserviceaccount.com
+GDRIVE_A_PRIVATE_KEY     → (dari cred/drive_1_cred.json → private_key)
+GDRIVE_A_FOLDER_ID       → 1PmECo6tOtrCt0WZ44NS-t7HQb-pSMDzV
 
 # Google Drive — Akun B
-GDRIVE_B_CLIENT_EMAIL    → Dari Bagian 1 (Akun B)
-GDRIVE_B_PRIVATE_KEY     → Dari Bagian 1 (Akun B)
-GDRIVE_B_FOLDER_ID       → Dari Bagian 1 (Akun B)
+GDRIVE_B_CLIENT_EMAIL    → akademik105-storage@akademik105-drive-b.iam.gserviceaccount.com
+GDRIVE_B_PRIVATE_KEY     → (dari cred/drive_2_cred.json → private_key)
+GDRIVE_B_FOLDER_ID       → 1gQcYidCs0M5OLWv4XrrOjoc8Qxm8KbVC
 
 # Google Sheets (GForm sync)
-GSHEETS_CLIENT_EMAIL     → Dari Bagian 3
-GSHEETS_PRIVATE_KEY      → Dari Bagian 3
+GSHEETS_CLIENT_EMAIL     → akademik105-sheets@akademik105-auth.iam.gserviceaccount.com
+GSHEETS_PRIVATE_KEY      → (dari cred/sheet_cred.json → private_key)
 
 # App config
 NEXT_PUBLIC_APP_NAME     → Akademik 105
@@ -258,6 +249,8 @@ NEXT_PUBLIC_ORG_NAME     → HMK AMISCA ITB
 NEXT_PUBLIC_GFORM_URL    → Link Google Form dari Bagian 4 (https://forms.gle/xxx)
 SUPERADMIN_EMAILS        → email-kamu@gmail.com
 ```
+
+> **Catatan:** Semua file credential asli tersimpan di folder `cred/` (sudah di-gitignore). File `.env.local` sudah dibuat otomatis dari credential tersebut.
 
 ### Langkah 6.4 — Deploy
 

@@ -37,7 +37,7 @@ export default auth((req) => {
 
     // No session → redirect to sign in
     if (!session?.user) {
-        const signInUrl = new URL("/auth/signin", req.url);
+        const signInUrl = new URL("/api/auth/signin", req.url);
         signInUrl.searchParams.set("callbackUrl", pathname);
         return NextResponse.redirect(signInUrl);
     }

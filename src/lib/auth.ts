@@ -13,10 +13,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
         }),
     ],
-    pages: {
-        signIn: "/auth/signin",
-        error: "/auth/error",
-    },
     callbacks: {
         /**
          * signIn callback — Full lifecycle per rules.md §3.4

@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-import { files, auditLog } from "@/db/schema";
+import { files } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { generateSignedUrl } from "@/lib/drive/signed-url";

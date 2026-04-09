@@ -1,7 +1,6 @@
 "use client";
 
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
 
 export default function UsersPage() {
     return (

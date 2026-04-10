@@ -1,0 +1,7 @@
+﻿
+> akademik-105@0.1.0 db:migrate
+> drizzle-kit migrate
+
+No config path provided, using default 'drizzle.config.ts'
+Reading config file 'E:\Project_G-Labs\akademik_105\drizzle.config.ts'
+[Γú╖] applying migrations...[2K[1G[Γú╖] applying migrations...

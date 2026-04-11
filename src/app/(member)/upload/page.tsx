@@ -130,7 +130,8 @@ export default function UploadPage() {
             });
 
             if (!uploadRes.ok) {
-                throw new Error(`Upload ke Google Drive gagal: ${uploadRes.status}`);
+                const errorBody = await uploadRes.text().catch(() => "No response body");
+                throw new Error(`Upload ke Google Drive gagal: ${uploadRes.status} - ${errorBody}`);
             }
 
             const driveData = await uploadRes.json();

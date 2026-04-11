@@ -1,16 +1,78 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { FileGrid } from "@/components/file/FileGrid";
 import { Select } from "@/components/ui/Input";
 
+const ITEMS_PER_PAGE_GRID = 24;
+const ITEMS_PER_PAGE_LIST = 50;
+
+interface FileData {
+    id: string;
+    title: string;
+    subject: string;
+    tags?: string | null;
+    mimeType: string;
+    sizeBytes: number;
+    createdAt: number;
+    uploaderName?: string;
+    uploaderAvatar?: string;
+    year?: number | null;
+}
 
 export default function BrowsePage() {
     const [view, setView] = useState<"grid" | "list">("grid");
     const [sort, setSort] = useState("newest");
+    const [filterSubject, setFilterSubject] = useState("");
+    const [filterType, setFilterType] = useState("");
+    const [page, setPage] = useState(1);
+    const [files, setFiles] = useState<FileData[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    // Placeholder data — will be replaced with API fetch
-    const files: Parameters<typeof FileGrid>[0]["files"] = [];
+    const fetchFiles = useCallback(async () => {
+        setLoading(true);
+        try {
+            const res = await fetch("/api/files");
+            if (res.ok) {
+                const data = await res.json();
+                setFiles(data.files ?? []);
+            }
+        } catch (err) {
+            console.error("Gagal memuat file:", err);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchFiles();
+    }, [fetchFiles]);
+
+    // Client-side sort
+    const sorted = [...files].sort((a, b) => {
+        switch (sort) {
+            case "oldest": return a.createdAt - b.createdAt;
+            case "title": return a.title.localeCompare(b.title);
+            case "size": return b.sizeBytes - a.sizeBytes;
+            default: return b.createdAt - a.createdAt; // newest
+        }
+    });
+
+    // Client-side filter
+    const filtered = sorted.filter((f) => {
+        if (filterSubject && f.subject !== filterSubject) return false;
+        if (filterType && f.mimeType !== filterType) return false;
+        return true;
+    });
+
+    // Pagination
+    const perPage = view === "grid" ? ITEMS_PER_PAGE_GRID : ITEMS_PER_PAGE_LIST;
+    const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
+    const safeCurrentPage = Math.min(page, totalPages);
+    const paginated = filtered.slice((safeCurrentPage - 1) * perPage, safeCurrentPage * perPage);
+
+    // Extract unique subjects for filter dropdown
+    const subjects = Array.from(new Set(files.map((f) => f.subject).filter(Boolean)));
 
     return (
         <div>
@@ -31,16 +93,19 @@ export default function BrowsePage() {
             </p>
 
             {/* Filter bar */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
                 <div className="flex items-center gap-3">
                     <Select
                         options={[
                             { value: "", label: "Semua Mata Kuliah" },
-                            { value: "kimia-organik", label: "Kimia Organik" },
-                            { value: "kimia-analitik", label: "Kimia Analitik" },
-                            { value: "kimia-fisika", label: "Kimia Fisika" },
+                            ...subjects.map((s) => ({ value: s, label: s })),
                         ]}
                         label="MATA KULIAH"
+                        value={filterSubject}
+                        onChange={(e) => {
+                            setFilterSubject((e.target as HTMLSelectElement).value);
+                            setPage(1);
+                        }}
                         className="w-48"
                     />
                     <Select
@@ -49,8 +114,14 @@ export default function BrowsePage() {
                             { value: "application/pdf", label: "PDF" },
                             { value: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", label: "DOCX" },
                             { value: "application/vnd.openxmlformats-officedocument.presentationml.presentation", label: "PPTX" },
+                            { value: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", label: "XLSX" },
                         ]}
                         label="FORMAT"
+                        value={filterType}
+                        onChange={(e) => {
+                            setFilterType((e.target as HTMLSelectElement).value);
+                            setPage(1);
+                        }}
                     />
                 </div>
 
@@ -70,7 +141,7 @@ export default function BrowsePage() {
                     {/* View toggle */}
                     <div className="flex items-center gap-1 bg-surface-container-low rounded-md p-1">
                         <button
-                            onClick={() => setView("grid")}
+                            onClick={() => { setView("grid"); setPage(1); }}
                             className={`p-1.5 rounded-sm transition-colors ${view === "grid"
                                 ? "bg-surface-container-lowest text-secondary"
                                 : "text-on-surface/40 hover:text-on-surface"
@@ -79,7 +150,7 @@ export default function BrowsePage() {
                             <GridIcon className="w-4 h-4" />
                         </button>
                         <button
-                            onClick={() => setView("list")}
+                            onClick={() => { setView("list"); setPage(1); }}
                             className={`p-1.5 rounded-sm transition-colors ${view === "list"
                                 ? "bg-surface-container-lowest text-secondary"
                                 : "text-on-surface/40 hover:text-on-surface"
@@ -91,13 +162,46 @@ export default function BrowsePage() {
                 </div>
             </div>
 
-            {/* File grid */}
-            <FileGrid files={files} view={view} />
+            {/* Loading state */}
+            {loading ? (
+                <div className="flex flex-col items-center justify-center py-20">
+                    <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mb-4" />
+                    <p className="text-sm text-on-surface/50">Memuat file...</p>
+                </div>
+            ) : (
+                <>
+                    {/* File count */}
+                    <p className="text-xs text-on-surface/40 mb-4">
+                        {filtered.length} file ditemukan
+                    </p>
 
-            {/* Pagination */}
-            <div className="flex items-center justify-center gap-2 mt-8">
-                <span className="text-xs text-on-surface/50">Halaman 1</span>
-            </div>
+                    {/* File grid/list */}
+                    <FileGrid files={paginated} view={view} />
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-center gap-2 mt-8">
+                            <button
+                                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                disabled={safeCurrentPage <= 1}
+                                className="px-3 py-1.5 text-xs rounded-md bg-surface-container-low text-on-surface/60 hover:text-on-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            >
+                                ← Sebelumnya
+                            </button>
+                            <span className="text-xs text-on-surface/50">
+                                Halaman {safeCurrentPage} dari {totalPages}
+                            </span>
+                            <button
+                                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                                disabled={safeCurrentPage >= totalPages}
+                                className="px-3 py-1.5 text-xs rounded-md bg-surface-container-low text-on-surface/60 hover:text-on-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            >
+                                Selanjutnya →
+                            </button>
+                        </div>
+                    )}
+                </>
+            )}
         </div>
     );
 }

@@ -51,39 +51,67 @@ export class GoogleDriveAdapter {
     /**
      * Initialize a resumable upload session.
      * Returns the resumable upload URI that the client uploads to directly.
+     * Uses Google Drive API v3 resumable upload protocol:
+     * 1. POST metadata to initiate session
+     * 2. Google responds with Location header containing the resumable URI
+     * 3. Client uploads file bytes directly to that URI (bypasses Vercel)
      */
     async initResumableUpload(
         driveId: DriveAccountId,
         fileName: string,
-        mimeType: string
-    ): Promise<string> {
-        const drive = this.getDriveClient(driveId);
+        mimeType: string,
+        fileSize?: number
+    ): Promise<{ uploadUri: string; gdriveFileId: string }> {
         const creds = this.getCredentials(driveId);
-
-        const response = await drive.files.create(
-            {
-                requestBody: {
-                    name: fileName,
-                    parents: [creds.folderId],
-                    mimeType,
-                },
-                media: {
-                    mimeType,
-                    body: undefined as unknown as NodeJS.ReadableStream,
-                },
-                fields: "id",
+        const auth = new google.auth.GoogleAuth({
+            credentials: {
+                client_email: creds.clientEmail,
+                private_key: creds.privateKey,
             },
-            {
-                // Request a resumable upload URI
-                headers: {
-                    "X-Upload-Content-Type": mimeType,
-                },
-            }
-        );
+            scopes: ["https://www.googleapis.com/auth/drive"],
+        });
 
-        // For resumable uploads with googleapis, we use the location header
-        // In practice, the client will use the resumable URI directly
-        return response.data.id ?? "";
+        const accessToken = await auth.getAccessToken();
+        if (!accessToken) {
+            throw new Error(`Gagal mendapatkan access token untuk Drive ${driveId}`);
+        }
+
+        // Step 1: Initiate resumable upload session via raw HTTP
+        const metadata = JSON.stringify({
+            name: fileName,
+            parents: [creds.folderId],
+            mimeType,
+        });
+
+        const initUrl = "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id";
+        const headers: Record<string, string> = {
+            "Authorization": `Bearer ${accessToken}`,
+            "Content-Type": "application/json; charset=UTF-8",
+            "X-Upload-Content-Type": mimeType,
+        };
+        if (fileSize) {
+            headers["X-Upload-Content-Length"] = String(fileSize);
+        }
+
+        const initResponse = await fetch(initUrl, {
+            method: "POST",
+            headers,
+            body: metadata,
+        });
+
+        if (!initResponse.ok) {
+            const errText = await initResponse.text();
+            throw new Error(`Drive resumable upload init failed: ${initResponse.status} ${errText}`);
+        }
+
+        const uploadUri = initResponse.headers.get("Location");
+        if (!uploadUri) {
+            throw new Error("Drive did not return a resumable upload URI (Location header missing)");
+        }
+
+        // We don't have the file ID yet — it's assigned after upload completes
+        // Return the URI for client-side upload
+        return { uploadUri, gdriveFileId: "" };
     }
 
     /** Verify a file exists on Drive and return its metadata */

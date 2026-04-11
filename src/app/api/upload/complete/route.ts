@@ -58,6 +58,15 @@ export async function POST(req: NextRequest) {
         );
     }
 
+    // Validate MIME type
+    const { ALLOWED_MIME_TYPES } = await import("@/types");
+    if (!(ALLOWED_MIME_TYPES as readonly string[]).includes(mimeType)) {
+        return NextResponse.json(
+            { error: `Tipe file tidak didukung: ${mimeType}` },
+            { status: 400 }
+        );
+    }
+
     // Verify file exists on Drive
     const adapter = getDriveAdapter();
     const driveFile = await adapter.getFile(

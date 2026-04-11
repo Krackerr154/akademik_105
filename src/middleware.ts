@@ -9,6 +9,7 @@ const PUBLIC_ROUTES = [
     "/suspended",
     "/auth",
     "/api/auth",
+    "/api/settings",
 ];
 
 // Routes requiring admin+ role

@@ -21,10 +21,9 @@ export async function GET() {
     const results: Array<{
         driveId: string;
         envCheck: {
-            clientEmail: boolean;
-            privateKey: boolean;
-            privateKeyLength: number;
-            privateKeyStartsWith: string;
+            refreshToken: boolean;
+            refreshTokenLength: number;
+            refreshTokenStartsWith: string;
             folderId: boolean;
         };
         connectionTest: {
@@ -40,42 +39,38 @@ export async function GET() {
 
     for (const driveId of driveIds) {
         const prefix = `GDRIVE_${driveId}`;
-        const clientEmail = process.env[`${prefix}_CLIENT_EMAIL`] ?? "";
-        const rawPrivateKey = process.env[`${prefix}_PRIVATE_KEY`] ?? "";
-        const privateKey = rawPrivateKey.replace(/\\n/g, "\n");
+        const refreshToken = process.env[`${prefix}_REFRESH_TOKEN`] ?? "";
         const folderId = process.env[`${prefix}_FOLDER_ID`] ?? "";
 
         const envCheck = {
-            clientEmail: !!clientEmail,
-            privateKey: !!rawPrivateKey,
-            privateKeyLength: rawPrivateKey.length,
-            privateKeyStartsWith: rawPrivateKey.substring(0, 27) + "...",
+            refreshToken: !!refreshToken,
+            refreshTokenLength: refreshToken.length,
+            refreshTokenStartsWith: refreshToken.substring(0, 15) + "...",
             folderId: !!folderId,
         };
 
         let connectionTest: (typeof results)[number]["connectionTest"];
 
-        if (!clientEmail || !rawPrivateKey || !folderId) {
+        const clientId = process.env.GOOGLE_CLIENT_ID;
+        const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+        if (!refreshToken || !folderId || !clientId || !clientSecret) {
             connectionTest = {
                 success: false,
                 error: `Missing env vars: ${[
-                    !clientEmail && `${prefix}_CLIENT_EMAIL`,
-                    !rawPrivateKey && `${prefix}_PRIVATE_KEY`,
+                    !refreshToken && `${prefix}_REFRESH_TOKEN`,
                     !folderId && `${prefix}_FOLDER_ID`,
+                    !clientId && `GOOGLE_CLIENT_ID`,
+                    !clientSecret && `GOOGLE_CLIENT_SECRET`,
                 ].filter(Boolean).join(", ")}`,
             };
         } else {
             try {
                 const { google } = await import("googleapis");
-                const auth = new google.auth.GoogleAuth({
-                    credentials: {
-                        client_email: clientEmail,
-                        private_key: privateKey,
-                    },
-                    scopes: ["https://www.googleapis.com/auth/drive"],
-                });
+                const oauth2Client = new google.auth.OAuth2(clientId, clientSecret);
+                oauth2Client.setCredentials({ refresh_token: refreshToken });
 
-                const drive = google.drive({ version: "v3", auth });
+                const drive = google.drive({ version: "v3", auth: oauth2Client });
                 const response = await drive.about.get({
                     fields: "storageQuota",
                 });

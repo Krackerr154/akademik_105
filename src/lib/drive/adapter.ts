@@ -3,14 +3,13 @@ import { google, drive_v3 } from "googleapis";
 type DriveAccountId = "A" | "B";
 
 interface DriveCredentials {
-    clientEmail: string;
-    privateKey: string;
+    refreshToken: string;
     folderId: string;
 }
 
 /**
  * GoogleDriveAdapter — per rules.md §6
- * - Service accounts only, lazy credential loading
+ * - OAuth2 Refresh Token auth (Option 2)
  * - Never expose gdrive_file_id to client
  */
 export class GoogleDriveAdapter {
@@ -18,32 +17,37 @@ export class GoogleDriveAdapter {
 
     private getCredentials(driveId: DriveAccountId): DriveCredentials {
         const prefix = `GDRIVE_${driveId}`;
-        const clientEmail = process.env[`${prefix}_CLIENT_EMAIL`];
-        const privateKey = process.env[`${prefix}_PRIVATE_KEY`]?.replace(
-            /\\n/g,
-            "\n"
-        );
+        const refreshToken = process.env[`${prefix}_REFRESH_TOKEN`];
         const folderId = process.env[`${prefix}_FOLDER_ID`];
 
-        if (!clientEmail || !privateKey || !folderId) {
-            throw new Error(`Drive ${driveId} credentials belum dikonfigurasi`);
+        if (!refreshToken || !folderId) {
+            throw new Error(`Drive ${driveId} credentials belum dikonfigurasi (REFRESH_TOKEN / FOLDER_ID)`);
         }
 
-        return { clientEmail, privateKey, folderId };
+        return { refreshToken, folderId };
     }
 
     private getDriveClient(driveId: DriveAccountId): drive_v3.Drive {
         if (!this.driveClients.has(driveId)) {
             const creds = this.getCredentials(driveId);
-            const auth = new google.auth.GoogleAuth({
-                credentials: {
-                    client_email: creds.clientEmail,
-                    private_key: creds.privateKey,
-                },
-                scopes: ["https://www.googleapis.com/auth/drive"],
+            const clientId = process.env.GOOGLE_CLIENT_ID;
+            const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+            if (!clientId || !clientSecret) {
+                throw new Error("GOOGLE_CLIENT_ID dan GOOGLE_CLIENT_SECRET wajib diisi");
+            }
+
+            const oauth2Client = new google.auth.OAuth2(
+                clientId,
+                clientSecret,
+                "https://developers.google.com/oauthplayground" // Standard redirect URI for refresh token setups
+            );
+
+            oauth2Client.setCredentials({
+                refresh_token: creds.refreshToken,
             });
 
-            this.driveClients.set(driveId, google.drive({ version: "v3", auth }));
+            this.driveClients.set(driveId, google.drive({ version: "v3", auth: oauth2Client }));
         }
         return this.driveClients.get(driveId)!;
     }
@@ -64,15 +68,15 @@ export class GoogleDriveAdapter {
         origin?: string
     ): Promise<{ uploadUri: string; gdriveFileId: string }> {
         const creds = this.getCredentials(driveId);
-        const auth = new google.auth.GoogleAuth({
-            credentials: {
-                client_email: creds.clientEmail,
-                private_key: creds.privateKey,
-            },
-            scopes: ["https://www.googleapis.com/auth/drive"],
+        const clientId = process.env.GOOGLE_CLIENT_ID;
+        const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+        const oauth2Client = new google.auth.OAuth2(clientId, clientSecret);
+        oauth2Client.setCredentials({
+            refresh_token: creds.refreshToken,
         });
 
-        const accessToken = await auth.getAccessToken();
+        const { token: accessToken } = await oauth2Client.getAccessToken();
         if (!accessToken) {
             throw new Error(`Gagal mendapatkan access token untuk Drive ${driveId}`);
         }
@@ -84,7 +88,7 @@ export class GoogleDriveAdapter {
             mimeType,
         });
 
-        const initUrl = "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id";
+        const initUrl = "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true&fields=id";
         const headers: Record<string, string> = {
             "Authorization": `Bearer ${accessToken}`,
             "Content-Type": "application/json; charset=UTF-8",
@@ -128,6 +132,7 @@ export class GoogleDriveAdapter {
             const response = await drive.files.get({
                 fileId: gdriveFileId,
                 fields: "id,name,size",
+                supportsAllDrives: true,
             });
 
             return {
@@ -148,7 +153,10 @@ export class GoogleDriveAdapter {
     async deleteFile(driveId: DriveAccountId, gdriveFileId: string): Promise<boolean> {
         try {
             const drive = this.getDriveClient(driveId);
-            await drive.files.delete({ fileId: gdriveFileId });
+            await drive.files.delete({
+                fileId: gdriveFileId,
+                supportsAllDrives: true,
+            });
             return true;
         } catch (err) {
             console.error(

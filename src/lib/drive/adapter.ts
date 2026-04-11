@@ -60,7 +60,8 @@ export class GoogleDriveAdapter {
         driveId: DriveAccountId,
         fileName: string,
         mimeType: string,
-        fileSize?: number
+        fileSize?: number,
+        origin?: string
     ): Promise<{ uploadUri: string; gdriveFileId: string }> {
         const creds = this.getCredentials(driveId);
         const auth = new google.auth.GoogleAuth({
@@ -91,6 +92,9 @@ export class GoogleDriveAdapter {
         };
         if (fileSize) {
             headers["X-Upload-Content-Length"] = String(fileSize);
+        }
+        if (origin) {
+            headers["Origin"] = origin;
         }
 
         const initResponse = await fetch(initUrl, {

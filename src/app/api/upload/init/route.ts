@@ -66,6 +66,8 @@ export async function POST(req: NextRequest) {
         );
     }
 
+    const origin = req.headers.get("origin") || req.nextUrl.origin;
+
     // Initialize resumable upload session on Google Drive
     try {
         const adapter = getDriveAdapter();
@@ -73,7 +75,8 @@ export async function POST(req: NextRequest) {
             driveId,
             fileName,
             mimeType,
-            fileSize
+            fileSize,
+            origin
         );
 
         return NextResponse.json({

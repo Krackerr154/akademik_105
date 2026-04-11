@@ -125,7 +125,6 @@ export default function UploadPage() {
                 method: "PUT",
                 headers: {
                     "Content-Type": selectedFile.type,
-                    "Content-Length": String(selectedFile.size),
                 },
                 body: selectedFile,
             });
@@ -220,10 +219,10 @@ export default function UploadPage() {
                             onDragLeave={handleDragLeave}
                             onDrop={handleDrop}
                             className={`border-2 border-dashed rounded-md p-8 text-center transition-colors cursor-pointer ${dragOver
-                                    ? "border-secondary bg-secondary/5"
-                                    : selectedFile
-                                        ? "border-emerald-400/40 bg-emerald-50/30 dark:bg-emerald-900/10"
-                                        : "border-outline-variant/30 hover:border-secondary/40"
+                                ? "border-secondary bg-secondary/5"
+                                : selectedFile
+                                    ? "border-emerald-400/40 bg-emerald-50/30 dark:bg-emerald-900/10"
+                                    : "border-outline-variant/30 hover:border-secondary/40"
                                 }`}
                         >
                             {selectedFile ? (
@@ -382,8 +381,8 @@ export default function UploadPage() {
                                 <button
                                     onClick={() => setVisibility("members")}
                                     className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${visibility === "members"
-                                            ? "bg-secondary text-on-secondary"
-                                            : "bg-surface-container-high text-on-surface/60 hover:text-on-surface"
+                                        ? "bg-secondary text-on-secondary"
+                                        : "bg-surface-container-high text-on-surface/60 hover:text-on-surface"
                                         }`}
                                 >
                                     Publik
@@ -391,8 +390,8 @@ export default function UploadPage() {
                                 <button
                                     onClick={() => setVisibility("admin_only")}
                                     className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${visibility === "admin_only"
-                                            ? "bg-secondary text-on-secondary"
-                                            : "bg-surface-container-high text-on-surface/60 hover:text-on-surface"
+                                        ? "bg-secondary text-on-secondary"
+                                        : "bg-surface-container-high text-on-surface/60 hover:text-on-surface"
                                         }`}
                                 >
                                     Admin Only

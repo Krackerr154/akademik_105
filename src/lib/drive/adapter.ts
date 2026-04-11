@@ -166,16 +166,24 @@ export class GoogleDriveAdapter {
             });
 
             const quota = response.data.storageQuota;
-            if (!quota) return null;
+            if (!quota) {
+                console.warn(`[DriveAdapter] Drive ${driveId}: no storageQuota returned`);
+                return null;
+            }
 
-            return {
-                used: parseInt(quota.usageInDrive ?? "0", 10),
-                total: parseInt(quota.limit ?? "0", 10),
-            };
+            const used = parseInt(quota.usageInDrive ?? quota.usage ?? "0", 10);
+            // Service accounts often return limit=0 or no limit
+            // Default to 15 GB free tier if limit is 0 or missing
+            let total = parseInt(quota.limit ?? "0", 10);
+            if (total === 0) {
+                total = 15 * 1024 * 1024 * 1024; // 15 GB default
+            }
+
+            return { used, total };
         } catch (err) {
             console.error(
                 `[DriveAdapter] Failed to get usage for Drive ${driveId}:`,
-                err
+                err instanceof Error ? err.message : err
             );
             return null;
         }

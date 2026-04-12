@@ -35,3 +35,37 @@ export async function generateSignedUrl(
 
     return downloadUrl;
 }
+
+/**
+ * Generate a preview URL for a file on Google Drive.
+ * Per rules.md §6.4:
+ * - Server-side only
+ * - Log every preview to audit_log
+ */
+export async function generatePreviewUrl(
+    driveId: string,
+    gdriveFileId: string,
+    userId: string,
+    fileId: string
+): Promise<string | null> {
+    const adapter = getDriveAdapter();
+    const previewUrl = await adapter.getPreviewUrl(
+        driveId as "A" | "B",
+        gdriveFileId
+    );
+
+    if (!previewUrl) return null;
+
+    // Log preview to audit
+    const db = getDb();
+    await db.insert(auditLog).values({
+        id: crypto.randomUUID(),
+        userId,
+        action: "preview",
+        targetId: fileId,
+        metadata: JSON.stringify({ driveId }),
+        createdAt: Date.now(),
+    });
+
+    return previewUrl;
+}

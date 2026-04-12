@@ -220,6 +220,31 @@ export class GoogleDriveAdapter {
             return null;
         }
     }
+
+    /**
+     * Generate a preview link (webViewLink).
+     * Used for embedding in iframes.
+     */
+    async getPreviewUrl(
+        driveId: DriveAccountId,
+        gdriveFileId: string
+    ): Promise<string | null> {
+        try {
+            const drive = this.getDriveClient(driveId);
+            const response = await drive.files.get({
+                fileId: gdriveFileId,
+                fields: "webViewLink",
+            });
+            let url = response.data.webViewLink ?? null;
+            if (url) {
+                // To ensure iframe embedding works properly without full Drive header
+                url = url.replace(/\/view\?usp=drivesdk$/, "/preview");
+            }
+            return url;
+        } catch {
+            return null;
+        }
+    }
 }
 
 // Singleton — lazy initialized

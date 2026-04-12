@@ -10,6 +10,7 @@ const PUBLIC_ROUTES = [
     "/auth",
     "/api/auth",
     "/api/settings",
+    "/login",
 ];
 
 // Routes requiring admin+ role
@@ -38,7 +39,7 @@ export default auth((req) => {
 
     // No session → redirect to sign in
     if (!session?.user) {
-        const signInUrl = new URL("/api/auth/signin", req.url);
+        const signInUrl = new URL("/login", req.url);
         signInUrl.searchParams.set("callbackUrl", pathname);
         return NextResponse.redirect(signInUrl);
     }

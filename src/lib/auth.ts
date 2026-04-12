@@ -7,6 +7,9 @@ import type { SessionUser } from "@/types";
 import { formatNimMasked } from "@/lib/utils";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+    pages: {
+        signIn: "/login",
+    },
     providers: [
         Google({
             clientId: process.env.GOOGLE_CLIENT_ID!,

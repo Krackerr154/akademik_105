@@ -5,6 +5,10 @@ import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { generatePreviewUrl } from "@/lib/drive/signed-url";
 
+function errorResponse(error: string, status: number, code: string) {
+    return NextResponse.json({ error, code }, { status });
+}
+
 /** GET /api/files/[id]/preview */
 export async function GET(
     _req: NextRequest,
@@ -12,11 +16,11 @@ export async function GET(
 ) {
     const session = await auth();
     if (!session?.user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        return errorResponse("Unauthorized", 401, "UNAUTHORIZED");
     }
     const user = session.user as { id?: string; role?: string; status?: string };
     if (user.status !== "active") {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        return errorResponse("Forbidden", 403, "FORBIDDEN_INACTIVE");
     }
 
     const db = getDb();
@@ -27,14 +31,14 @@ export async function GET(
         .limit(1);
 
     if (file.length === 0) {
-        return NextResponse.json({ error: "File tidak ditemukan" }, { status: 404 });
+        return errorResponse("File tidak ditemukan", 404, "FILE_NOT_FOUND");
     }
 
     const f = file[0];
     const isAdmin = user.role === "admin" || user.role === "superadmin";
 
     if (f.visibility === "admin_only" && !isAdmin) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        return errorResponse("Forbidden", 403, "FORBIDDEN_VISIBILITY");
     }
 
     const url = await generatePreviewUrl(
@@ -45,9 +49,10 @@ export async function GET(
     );
 
     if (!url) {
-        return NextResponse.json(
-            { error: "Gagal membuat URL pratinjau" },
-            { status: 500 }
+        return errorResponse(
+            "Gagal membuat URL pratinjau",
+            500,
+            "PREVIEW_URL_FAILED"
         );
     }
 

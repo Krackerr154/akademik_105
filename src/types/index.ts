@@ -98,6 +98,35 @@ export const FILE_TYPE_LABELS: Record<string, string> = {
     "application/zip": "ZIP",
 };
 
+export type FilePreviewMode = "inline" | "download_only";
+
+const DRIVE_INLINE_PREVIEW_MIME_TYPES = new Set<string>([
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "text/plain",
+    "image/png",
+    "image/jpeg",
+]);
+
+export function isInlinePreviewMimeType(mimeType?: string | null): boolean {
+    if (!mimeType) return false;
+
+    const normalized = mimeType.toLowerCase().trim();
+    if (DRIVE_INLINE_PREVIEW_MIME_TYPES.has(normalized)) {
+        return true;
+    }
+
+    return normalized.startsWith("image/") || normalized.startsWith("text/");
+}
+
+export function getFilePreviewMode(
+    mimeType?: string | null
+): FilePreviewMode {
+    return isInlinePreviewMimeType(mimeType) ? "inline" : "download_only";
+}
+
 // ─── Document Types (Controlled Vocabulary) ───────────────────────────
 
 export const DEFAULT_DOCUMENT_TYPE_CODES = [

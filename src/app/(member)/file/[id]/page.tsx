@@ -6,7 +6,11 @@ import { notFound } from "next/navigation";
 import { FilePreview } from "@/components/ui/file/FilePreview";
 import { FileActions } from "@/components/ui/file/FileActions";
 import { auth } from "@/lib/auth";
-import { formatDocumentTypeLabel, normalizeDocumentTypeCode } from "@/types";
+import {
+    formatDocumentTypeLabel,
+    isInlinePreviewMimeType,
+    normalizeDocumentTypeCode,
+} from "@/types";
 
 export default async function FileDetailPage({ params }: { params: { id: string } }) {
     const fileId = params.id;
@@ -28,6 +32,7 @@ export default async function FileDetailPage({ params }: { params: { id: string 
 
     // Format size
     const sizeMb = (file.sizeBytes / (1024 * 1024)).toFixed(2);
+    const hasInlinePreview = isInlinePreviewMimeType(file.mimeType);
 
     // Resolve document type with fallback from legacy tags data.
     let resolvedDocType = normalizeDocumentTypeCode(file.docType || "");
@@ -62,6 +67,12 @@ export default async function FileDetailPage({ params }: { params: { id: string 
                                     <Badge variant="data">{formatDocumentTypeLabel(resolvedDocType)}</Badge>
                                 </div>
                             </div>
+                            <div>
+                                <p className="text-xs text-on-surface/50 uppercase tracking-wide mb-1">PRATINJAU</p>
+                                <Badge variant={hasInlinePreview ? "flag-green" : "flag-yellow"}>
+                                    {hasInlinePreview ? "Tersedia Inline" : "Unduh Saja"}
+                                </Badge>
+                            </div>
                             <div><p className="text-xs text-on-surface/50 uppercase tracking-wide mb-1">PENULIS</p><p className="text-sm text-on-surface">{file.authors || "–"}</p></div>
                             <div><p className="text-xs text-on-surface/50 uppercase tracking-wide mb-1">TAHUN</p><p className="text-sm text-on-surface font-mono">{file.year || "–"}</p></div>
                             <div><p className="text-xs text-on-surface/50 uppercase tracking-wide mb-1">UKURAN FILE</p><p className="text-sm text-on-surface font-mono">{sizeMb} MB</p></div>
@@ -79,7 +90,11 @@ export default async function FileDetailPage({ params }: { params: { id: string 
                     />
                 </div>
                 <div className="lg:col-span-2">
-                    <FilePreview fileId={file.id} />
+                    <FilePreview
+                        fileId={file.id}
+                        mimeType={file.mimeType}
+                        fileTitle={file.title}
+                    />
                 </div>
             </div>
         </div>

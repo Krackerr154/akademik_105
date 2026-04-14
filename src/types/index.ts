@@ -98,6 +98,56 @@ export const FILE_TYPE_LABELS: Record<string, string> = {
     "application/zip": "ZIP",
 };
 
+// ─── Document Types (Controlled Vocabulary) ───────────────────────────
+
+export const DEFAULT_DOCUMENT_TYPE_CODES = [
+    "SLIDE",
+    "UJIAN 1",
+    "UJIAN 2",
+    "UJIAN 3",
+    "LATIHAN",
+    "SOLUSI",
+    "TEXTBOOK",
+    "SPEKTRA",
+    "KERATIN",
+    "OTHER",
+] as const;
+
+export type DefaultDocumentTypeCode =
+    (typeof DEFAULT_DOCUMENT_TYPE_CODES)[number];
+
+export interface DocumentTypeOption {
+    id?: string;
+    code: string;
+    label: string;
+    isSystem?: boolean;
+    isActive?: boolean;
+    sortOrder?: number;
+}
+
+/**
+ * Canonicalize document type codes so storage and search stay consistent.
+ */
+export function normalizeDocumentTypeCode(input: string): string {
+    const withoutStart = input.replace(/^\s*\[/, "");
+    const withoutEnd = withoutStart.replace(/\]\s*$/, "");
+    return withoutEnd.trim().replace(/\s+/g, " ").toUpperCase();
+}
+
+export function formatDocumentTypeLabel(code: string): string {
+    const normalized = normalizeDocumentTypeCode(code);
+    return normalized ? `[${normalized}]` : "[OTHER]";
+}
+
+export const DEFAULT_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] =
+    DEFAULT_DOCUMENT_TYPE_CODES.map((code, idx) => ({
+        code,
+        label: formatDocumentTypeLabel(code),
+        isSystem: true,
+        isActive: true,
+        sortOrder: idx,
+    }));
+
 // ─── Audit Actions ─────────────────────────────────────────────────────
 
 export const AUDIT_ACTIONS = {

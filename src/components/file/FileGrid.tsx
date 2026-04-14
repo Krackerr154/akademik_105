@@ -5,6 +5,7 @@ interface FileData {
     id: string;
     title: string;
     subject: string;
+    docType?: string | null;
     tags?: string | null;
     mimeType: string;
     sizeBytes: number;

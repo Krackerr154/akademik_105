@@ -1,9 +1,10 @@
 import { auth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-import { files, auditLog } from "@/db/schema";
+import { files, auditLog, documentTypes } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { getDriveAdapter } from "@/lib/drive/adapter";
+import { normalizeDocumentTypeCode } from "@/types";
 
 /** GET /api/files/[id] — File metadata */
 export async function GET(
@@ -80,14 +81,51 @@ export async function PATCH(
     }
 
     const body = await req.json();
-    const { title, subject, tags, abstract, year, authors, angkatanTags, visibility } =
+    const { title, subject, docType, tags, abstract, year, authors, angkatanTags, visibility } =
         body as Partial<typeof f>;
+
+    let nextDocType: string | undefined;
+    if (docType !== undefined) {
+        const normalizedDocType = normalizeDocumentTypeCode(String(docType));
+        if (!normalizedDocType) {
+            return NextResponse.json(
+                { error: "Tipe dokumen tidak valid" },
+                { status: 400 }
+            );
+        }
+
+        const matchingType = await db
+            .select({
+                code: documentTypes.code,
+                isActive: documentTypes.isActive,
+            })
+            .from(documentTypes)
+            .where(eq(documentTypes.code, normalizedDocType))
+            .limit(1);
+
+        if (matchingType.length === 0) {
+            return NextResponse.json(
+                { error: "Tipe dokumen tidak terdaftar" },
+                { status: 400 }
+            );
+        }
+
+        if (matchingType[0].isActive !== 1 && normalizedDocType !== f.docType) {
+            return NextResponse.json(
+                { error: "Tipe dokumen sudah diarsipkan dan tidak dapat dipakai" },
+                { status: 400 }
+            );
+        }
+
+        nextDocType = normalizedDocType;
+    }
 
     await db
         .update(files)
         .set({
             ...(title && { title }),
             ...(subject && { subject }),
+            ...(nextDocType !== undefined && { docType: nextDocType }),
             ...(tags !== undefined && { tags }),
             ...(abstract !== undefined && { abstract }),
             ...(year !== undefined && { year }),

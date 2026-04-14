@@ -1,12 +1,20 @@
 ﻿
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { DocumentTypeSelector } from "@/components/ui/file/DocumentTypeSelector";
 
-import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE, FILE_TYPE_LABELS } from "@/types";
+import {
+    ALLOWED_MIME_TYPES,
+    DEFAULT_DOCUMENT_TYPE_OPTIONS,
+    DocumentTypeOption,
+    FILE_TYPE_LABELS,
+    MAX_FILE_SIZE,
+    normalizeDocumentTypeCode,
+} from "@/types";
 import { formatBytes } from "@/lib/utils";
 import { extractMetadataFromFilename, ExtractedMetadata } from "@/lib/metadata-extractor";
 import pLimit from "p-limit";
@@ -17,10 +25,15 @@ import { UploadCloudIcon, FileCheckIcon, TrashIcon, AlertCircleIcon, FileIcon } 
 type UploadStatus = "idle" | "uploading" | "done" | "error";
 type FlowStep = "SELECT" | "REVIEW" | "UPLOAD" | "DONE";
 
+type FileMetadata = ExtractedMetadata & {
+        visibility: "members" | "admin_only";
+        abstract: string;
+};
+
 interface FileItem {
   id: string;
   file: File;
-  metadata: ExtractedMetadata & { visibility: "members" | "admin_only"; subject: string; abstract: string; title: string; year: string; authors: string; tags: string[] };
+    metadata: FileMetadata;
   status: UploadStatus;
   progress: number;
   error?: string;
@@ -34,11 +47,54 @@ export default function BatchUploadPage() {
     const [dragOver, setDragOver] = useState(false);
     const [filesQueue, setFilesQueue] = useState<FileItem[]>([]);
     const [overallProgress, setOverallProgress] = useState(0);
+    const [documentTypes, setDocumentTypes] = useState<DocumentTypeOption[]>(
+        DEFAULT_DOCUMENT_TYPE_OPTIONS
+    );
+    const [typesLoading, setTypesLoading] = useState(true);
 
     // Global "Apply to All" settings
     const [globalSubject, setGlobalSubject] = useState("");
     const [globalYear, setGlobalYear] = useState("");
+    const [globalDocType, setGlobalDocType] = useState("");
     const [globalVisibility, setGlobalVisibility] = useState<"members" | "admin_only">("members");
+
+    useEffect(() => {
+        let alive = true;
+
+        const fetchDocumentTypes = async () => {
+            try {
+                const res = await fetch("/api/document-types");
+                if (!res.ok) return;
+
+                const data = await res.json();
+                const fetched = Array.isArray(data.types)
+                    ? data.types.map((t: Record<string, unknown>) => ({
+                          code: String(t.code ?? ""),
+                          label: String(t.label ?? ""),
+                          isSystem: t.isSystem === 1 || t.isSystem === true,
+                          isActive: t.isActive === 1 || t.isActive === true,
+                          sortOrder: Number(t.sortOrder ?? 0),
+                      }))
+                    : [];
+
+                if (alive && fetched.length > 0) {
+                    setDocumentTypes(fetched);
+                }
+            } catch (err) {
+                console.error("[Upload] Gagal memuat tipe dokumen:", err);
+            } finally {
+                if (alive) {
+                    setTypesLoading(false);
+                }
+            }
+        };
+
+        fetchDocumentTypes();
+
+        return () => {
+            alive = false;
+        };
+    }, []);
 
     // Helpers
     const validateFile = (file: File): string | null => {
@@ -68,6 +124,7 @@ export default function BatchUploadPage() {
                 file,
                 metadata: {
                     ...extracted,
+                    docType: normalizeDocumentTypeCode(extracted.docType || "OTHER"),
                     visibility: "members",
                     abstract: "",
                 },
@@ -173,7 +230,7 @@ export default function BatchUploadPage() {
                         gdriveFileId,
                         title: metadata.title.trim(),
                         subject: metadata.subject.trim(),
-                        tags: metadata.tags.length > 0 ? JSON.stringify(metadata.tags) : null,
+                        docType: normalizeDocumentTypeCode(metadata.docType || "OTHER"),
                         abstract: metadata.abstract.trim() || null,
                         year: metadata.year ? parseInt(metadata.year) : null,
                         authors: metadata.authors.trim() || null,
@@ -212,24 +269,27 @@ export default function BatchUploadPage() {
                 ...item.metadata,
                 subject: globalSubject || item.metadata.subject,
                 year: globalYear || item.metadata.year,
+                docType: globalDocType || item.metadata.docType,
                 visibility: globalVisibility || item.metadata.visibility,
             }
         })));
         setGlobalSubject("");
         setGlobalYear("");
+        setGlobalDocType("");
     };
 
-    const setItemMetadata = (index: number, key: keyof FileItem["metadata"], value: string | string[]) => {
+    const setItemMetadata = <K extends keyof FileMetadata>(
+        index: number,
+        key: K,
+        value: FileMetadata[K]
+    ) => {
         setFilesQueue(q => {
             const newQ = [...q];
-            newQ[index].metadata = { ...newQ[index].metadata, [key]: value };
+            if (newQ[index]) {
+                newQ[index].metadata = { ...newQ[index].metadata, [key]: value };
+            }
             return newQ;
         });
-    };
-
-    const setItemTagsStr = (index: number, tagsStr: string) => {
-        const tagsBox = tagsStr.split(",").map(t => t.trim()).filter(Boolean);
-        setItemMetadata(index, "tags", tagsBox);
     };
 
     const removeItem = (index: number) => {
@@ -240,6 +300,13 @@ export default function BatchUploadPage() {
         });
     };
 
+    const hasInvalidRequiredMetadata = filesQueue.some(
+        (f) =>
+            !f.metadata.title.trim() ||
+            !f.metadata.subject.trim() ||
+            !normalizeDocumentTypeCode(f.metadata.docType || "").trim()
+    );
+
     return (
         <div>
             <div className="flex items-center gap-2 text-xs text-on-surface/50 font-sans mb-2">
@@ -248,7 +315,7 @@ export default function BatchUploadPage() {
             </div>
             <h1 className="text-3xl font-display font-bold text-primary mb-2">Unggah Dokumen (Batch)</h1>
             <p className="text-on-surface/60 text-sm mb-8 max-w-xl">
-                Unggah banyak file sekaligus. Sistem otomatis menebak judul, mata kuliah, dan tahun berdasarkan pola penamaan judul (misal: [UJIAN 1] KUGU 2021.pdf).
+                Unggah banyak file sekaligus. Sistem otomatis menebak tipe dokumen, judul, mata kuliah, dan tahun berdasarkan pola nama file (misal: [UJIAN 1] KUGU 2021.pdf).
             </p>
 
             {/* STEP 1: SELECT FILES */}
@@ -292,9 +359,9 @@ export default function BatchUploadPage() {
                             <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>Tambah File</Button>
                             <Button 
                                 onClick={startBatchUpload}
-                                disabled={filesQueue.some((f) => !f.metadata.title.trim() || !f.metadata.subject.trim())}
-                                className={filesQueue.some((f) => !f.metadata.title.trim() || !f.metadata.subject.trim()) ? "opacity-50 cursor-not-allowed" : ""}
-                                title={filesQueue.some((f) => !f.metadata.title.trim() || !f.metadata.subject.trim()) ? "Pastikan Judul dan Mata Kuliah terisi" : ""}
+                                disabled={hasInvalidRequiredMetadata}
+                                className={hasInvalidRequiredMetadata ? "opacity-50 cursor-not-allowed" : ""}
+                                title={hasInvalidRequiredMetadata ? "Pastikan Judul, Mata Kuliah, dan Tipe Dokumen terisi" : ""}
                             >
                                 Mulai Upload
                             </Button>
@@ -303,6 +370,16 @@ export default function BatchUploadPage() {
 
                     {filesQueue.length > 1 && (
                         <div className="bg-secondary/5 p-4 rounded-md border border-secondary/20 flex flex-wrap gap-4 items-end">
+                            <div className="flex-1 min-w-[220px]">
+                                <DocumentTypeSelector
+                                    id="global-doc-type"
+                                    label="TIPE DOKUMEN (Semua)"
+                                    value={globalDocType}
+                                    options={documentTypes}
+                                    onChange={setGlobalDocType}
+                                    showQuickPicks={false}
+                                />
+                            </div>
                             <div className="flex-1 min-w-[200px]">
                                 <Input 
                                     id="global-sub" label="MATA KULIAH (Semua)" 
@@ -330,6 +407,12 @@ export default function BatchUploadPage() {
                         </div>
                     )}
 
+                    {typesLoading && (
+                        <p className="text-xs text-on-surface/50">
+                            Memuat opsi tipe dokumen...
+                        </p>
+                    )}
+
                     {filesQueue.length === 1 ? (
                         <div className="bg-surface-container-lowest p-6 rounded-md shadow-sm border border-outline-variant/30 flex flex-col md:flex-row gap-8">
                             <div className="md:w-1/3 flex flex-col gap-4 border-r border-outline-variant/30 pr-6">
@@ -346,7 +429,7 @@ export default function BatchUploadPage() {
                                     <select 
                                         className="w-full bg-surface text-on-surface p-2.5 rounded border border-outline/30 focus:border-secondary focus:outline-none text-sm" 
                                         value={filesQueue[0].metadata.visibility} 
-                                        onChange={e => setItemMetadata(0, "visibility", e.target.value)}
+                                        onChange={e => setItemMetadata(0, "visibility", e.target.value as FileMetadata["visibility"])}
                                     >
                                         <option value="members">Semua Anggota</option>
                                         <option value="admin_only">Hanya Admin</option>
@@ -358,6 +441,16 @@ export default function BatchUploadPage() {
                             </div>
 
                             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div className="md:col-span-2">
+                                    <DocumentTypeSelector
+                                        id="single-doc-type"
+                                        label="TIPE DOKUMEN"
+                                        value={filesQueue[0].metadata.docType}
+                                        options={documentTypes}
+                                        onChange={(next) => setItemMetadata(0, "docType", next)}
+                                        required
+                                    />
+                                </div>
                                 <div className="md:col-span-2">
                                     <Input
                                         id="single-title" label="JUDUL DOKUMEN *"
@@ -389,15 +482,6 @@ export default function BatchUploadPage() {
                                         placeholder="Tambahkan detail mengenai file ini jika diperlukan..."
                                     />
                                 </div>
-                                <div className="md:col-span-2 text-xs">
-                                    <label className="text-xs font-bold text-on-surface/60 uppercase tracking-wider mb-1 block">Tagging (Pisahkan dengan koma)</label>
-                                    <input 
-                                        className="w-full bg-surface text-on-surface px-3 py-2 rounded border border-outline/30 focus:border-secondary focus:outline-none"
-                                        value={filesQueue[0].metadata.tags.join(", ")}
-                                        onChange={e => setItemTagsStr(0, e.target.value)} 
-                                        placeholder="uts, 2021, solusi"
-                                    />
-                                </div>
                             </div>
                         </div>
                     ) : (
@@ -422,7 +506,7 @@ export default function BatchUploadPage() {
                                             <select 
                                                 className="w-full bg-surface-container text-primary outline-none p-1.5 rounded border border-outline/20" 
                                                 value={item.metadata.visibility} 
-                                                onChange={e => setItemMetadata(i, "visibility", e.target.value)}
+                                                onChange={e => setItemMetadata(i, "visibility", e.target.value as FileMetadata["visibility"])}
                                             >
                                                 <option value="members">Semua Anggota</option>
                                                 <option value="admin_only">Hanya Admin</option>
@@ -430,6 +514,16 @@ export default function BatchUploadPage() {
                                         </div>
                                     </div>
                                     <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="md:col-span-2">
+                                            <DocumentTypeSelector
+                                                id={`doc-type-${i}`}
+                                                label="TIPE DOKUMEN"
+                                                value={item.metadata.docType}
+                                                options={documentTypes}
+                                                onChange={(next) => setItemMetadata(i, "docType", next)}
+                                                required
+                                            />
+                                        </div>
                                         <div className="md:col-span-2">
                                             <Input
                                                 id={`title-${i}`} label="JUDUL *"
@@ -444,14 +538,6 @@ export default function BatchUploadPage() {
                                             id={`year-${i}`} label="TAHUN"
                                             value={item.metadata.year} onChange={e => setItemMetadata(i, "year", e.target.value)}
                                         />
-                                        <div className="md:col-span-2 text-xs">
-                                            <p className="text-on-surface/60 font-semibold mb-1">TAG (Pisahkan dengan koma)</p>
-                                            <input 
-                                                className="w-full bg-surface text-on-surface px-3 py-2 rounded border border-outline/30 focus:border-secondary focus:outline-none"
-                                                value={item.metadata.tags.join(", ")}
-                                                onChange={e => setItemTagsStr(i, e.target.value)} 
-                                            />
-                                        </div>
                                     </div>
                                 </div>
                             ))}

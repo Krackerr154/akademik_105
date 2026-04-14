@@ -3,6 +3,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { FileGrid } from "@/components/file/FileGrid";
 import { Select } from "@/components/ui/Input";
+import {
+    DEFAULT_DOCUMENT_TYPE_OPTIONS,
+    DocumentTypeOption,
+    normalizeDocumentTypeCode,
+} from "@/types";
 
 const ITEMS_PER_PAGE_GRID = 24;
 const ITEMS_PER_PAGE_LIST = 50;
@@ -11,6 +16,7 @@ interface FileData {
     id: string;
     title: string;
     subject: string;
+    docType?: string | null;
     tags?: string | null;
     mimeType: string;
     sizeBytes: number;
@@ -24,10 +30,14 @@ export default function BrowsePage() {
     const [view, setView] = useState<"grid" | "list">("grid");
     const [sort, setSort] = useState("newest");
     const [filterSubject, setFilterSubject] = useState("");
+    const [filterDocType, setFilterDocType] = useState("");
     const [filterType, setFilterType] = useState("");
     const [page, setPage] = useState(1);
     const [files, setFiles] = useState<FileData[]>([]);
     const [loading, setLoading] = useState(true);
+    const [docTypeOptions, setDocTypeOptions] = useState<DocumentTypeOption[]>(
+        DEFAULT_DOCUMENT_TYPE_OPTIONS
+    );
 
     const fetchFiles = useCallback(async () => {
         setLoading(true);
@@ -48,6 +58,40 @@ export default function BrowsePage() {
         fetchFiles();
     }, [fetchFiles]);
 
+    useEffect(() => {
+        let alive = true;
+
+        const fetchDocumentTypes = async () => {
+            try {
+                const res = await fetch("/api/document-types");
+                if (!res.ok) return;
+
+                const data = await res.json();
+                const fetched = Array.isArray(data.types)
+                    ? data.types.map((t: Record<string, unknown>) => ({
+                          code: String(t.code ?? ""),
+                          label: String(t.label ?? ""),
+                          isSystem: t.isSystem === 1 || t.isSystem === true,
+                          isActive: t.isActive === 1 || t.isActive === true,
+                          sortOrder: Number(t.sortOrder ?? 0),
+                      }))
+                    : [];
+
+                if (alive && fetched.length > 0) {
+                    setDocTypeOptions(fetched);
+                }
+            } catch (err) {
+                console.error("Gagal memuat tipe dokumen:", err);
+            }
+        };
+
+        fetchDocumentTypes();
+
+        return () => {
+            alive = false;
+        };
+    }, []);
+
     // Client-side sort
     const sorted = [...files].sort((a, b) => {
         switch (sort) {
@@ -61,6 +105,7 @@ export default function BrowsePage() {
     // Client-side filter
     const filtered = sorted.filter((f) => {
         if (filterSubject && f.subject !== filterSubject) return false;
+        if (filterDocType && normalizeDocumentTypeCode(f.docType ?? "") !== filterDocType) return false;
         if (filterType && f.mimeType !== filterType) return false;
         return true;
     });
@@ -104,6 +149,21 @@ export default function BrowsePage() {
                         value={filterSubject}
                         onChange={(e) => {
                             setFilterSubject((e.target as HTMLSelectElement).value);
+                            setPage(1);
+                        }}
+                        className="w-48"
+                    />
+                    <Select
+                        options={[
+                            { value: "", label: "Semua Tipe Dokumen" },
+                            ...docTypeOptions
+                                .filter((opt) => opt.isActive !== false)
+                                .map((opt) => ({ value: opt.code, label: opt.label })),
+                        ]}
+                        label="TIPE DOKUMEN"
+                        value={filterDocType}
+                        onChange={(e) => {
+                            setFilterDocType((e.target as HTMLSelectElement).value);
                             setPage(1);
                         }}
                         className="w-48"

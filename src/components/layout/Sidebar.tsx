@@ -17,6 +17,7 @@ const ADMIN_ITEMS = [
     { href: "/admin/users", label: "Pengguna", icon: UserCogIcon, exact: false },
     { href: "/admin/drives", label: "Drive", icon: HardDriveIcon, exact: false },
     { href: "/admin/audit", label: "Audit Log", icon: ClipboardIcon, exact: false },
+    { href: "/admin/types", label: "Tipe Dokumen", icon: TagIcon, exact: false },
     { href: "/admin/settings", label: "Pengaturan", icon: SettingsIcon, exact: false },
 ] as const;
 
@@ -27,6 +28,9 @@ interface SidebarProps {
 export function Sidebar({ userRole }: SidebarProps) {
     const pathname = usePathname();
     const isAdmin = userRole === "admin" || userRole === "superadmin";
+    const visibleNavItems = isAdmin
+        ? NAV_ITEMS
+        : NAV_ITEMS.filter((item) => item.href !== "/upload");
 
     return (
         <aside className="fixed left-0 top-0 bottom-0 w-[220px] bg-surface-container-low flex flex-col z-40">
@@ -51,7 +55,7 @@ export function Sidebar({ userRole }: SidebarProps) {
 
             {/* Navigation */}
             <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
-                {NAV_ITEMS.map((item) => {
+                {visibleNavItems.map((item) => {
                     const isActive = pathname === item.href;
                     return (
                         <Link
@@ -115,11 +119,13 @@ export function Sidebar({ userRole }: SidebarProps) {
 
             {/* CTA */}
             <div className="px-3 pb-6">
-                <Link href="/upload">
-                    <Button variant="primary" size="sm" className="w-full">
-                        + Unggah Dokumen
-                    </Button>
-                </Link>
+                {isAdmin && (
+                    <Link href="/upload">
+                        <Button variant="primary" size="sm" className="w-full">
+                            + Unggah Dokumen
+                        </Button>
+                    </Link>
+                )}
             </div>
         </aside>
     );
@@ -210,6 +216,15 @@ function SettingsIcon({ className }: { className?: string }) {
         <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="3" />
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+    );
+}
+
+function TagIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20.59 13.41L11 3.83A2 2 0 0 0 9.59 3H4a1 1 0 0 0-1 1v5.59A2 2 0 0 0 3.83 11l9.58 9.59a2 2 0 0 0 2.83 0l4.35-4.35a2 2 0 0 0 0-2.83z" />
+            <circle cx="7.5" cy="7.5" r="1.5" />
         </svg>
     );
 }

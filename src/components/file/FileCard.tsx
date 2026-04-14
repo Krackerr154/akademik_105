@@ -1,11 +1,13 @@
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
 import { formatBytes, formatDate, getFileExtLabel } from "@/lib/utils";
+import { formatDocumentTypeLabel, normalizeDocumentTypeCode } from "@/types";
 
 interface FileCardProps {
     id: string;
     title: string;
     subject: string;
+    docType?: string | null;
     tags?: string | null;
     mimeType: string;
     sizeBytes: number;
@@ -19,6 +21,7 @@ export function FileCard({
     id,
     title,
     subject,
+    docType,
     tags,
     mimeType,
     sizeBytes,
@@ -27,7 +30,24 @@ export function FileCard({
     uploaderAvatar,
     className,
 }: FileCardProps) {
-    const parsedTags: string[] = tags ? JSON.parse(tags) : [];
+    const resolvedDocType = (() => {
+        if (docType) {
+            return normalizeDocumentTypeCode(docType);
+        }
+
+        try {
+            const parsed = tags ? (JSON.parse(tags) as string[]) : [];
+            if (parsed.length > 0) {
+                return normalizeDocumentTypeCode(parsed[0]);
+            }
+        } catch {
+            // Ignore malformed legacy tag JSON and fallback to OTHER.
+        }
+
+        return "OTHER";
+    })();
+
+    const docTypeLabel = formatDocumentTypeLabel(resolvedDocType);
     const fileExt = getFileExtLabel(mimeType);
 
     return (
@@ -43,27 +63,16 @@ export function FileCard({
                 <div className="w-10 h-10 rounded-md bg-secondary/10 flex items-center justify-center">
                     <FileIcon className="w-5 h-5 text-secondary" />
                 </div>
-                <Badge variant="subject">{subject}</Badge>
+                <div className="flex flex-wrap justify-end gap-1.5">
+                    <Badge variant="subject">{subject}</Badge>
+                    <Badge variant="data">{docTypeLabel}</Badge>
+                </div>
             </div>
 
             {/* Title */}
             <h3 className="font-display font-semibold text-primary text-sm leading-tight mb-2 line-clamp-2 group-hover:text-secondary transition-colors">
                 {title}
             </h3>
-
-            {/* Tags */}
-            {parsedTags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mb-3">
-                    {parsedTags.slice(0, 3).map((tag) => (
-                        <Badge key={tag} variant="data">
-                            {tag}
-                        </Badge>
-                    ))}
-                    {parsedTags.length > 3 && (
-                        <Badge variant="default">+{parsedTags.length - 3}</Badge>
-                    )}
-                </div>
-            )}
 
             {/* Meta row: file ext + size + date */}
             <div className="flex items-center gap-3 text-xs text-on-surface/50 font-mono mb-3">

@@ -1,9 +1,37 @@
+import {
+  DEFAULT_DOCUMENT_TYPE_CODES,
+  normalizeDocumentTypeCode,
+} from "@/types";
+
 export interface ExtractedMetadata {
   title: string;
-  tags: string[];
+  docType: string;
   subject: string;
   year: string;
   authors: string;
+}
+
+const DOC_TYPE_ALIASES: Record<string, string> = {
+  UJIAN1: "UJIAN 1",
+  UJIAN2: "UJIAN 2",
+  UJIAN3: "UJIAN 3",
+};
+
+function resolveDocumentTypeToken(token: string): string {
+  const normalized = normalizeDocumentTypeCode(token);
+  const compact = normalized.replace(/\s+/g, "");
+
+  if (DOC_TYPE_ALIASES[normalized]) {
+    return DOC_TYPE_ALIASES[normalized];
+  }
+  if (DOC_TYPE_ALIASES[compact]) {
+    return DOC_TYPE_ALIASES[compact];
+  }
+  if ((DEFAULT_DOCUMENT_TYPE_CODES as readonly string[]).includes(normalized)) {
+    return normalized;
+  }
+
+  return normalized || "OTHER";
 }
 
 export function extractMetadataFromFilename(filename: string): ExtractedMetadata {
@@ -11,29 +39,30 @@ export function extractMetadataFromFilename(filename: string): ExtractedMetadata
   
   const metadata: ExtractedMetadata = {
     title: nameWithoutExt,
-    tags: [],
+    docType: "OTHER",
     subject: "",
     year: "",
     authors: "",
   };
 
-  // 1. Extract Tags (e.g., [SLIDE], [UJIAN 1])
+  // 1. Extract bracket tokens and map primary one to document type.
   const tagRegex = /\[(.*?)\]/g;
   let match;
-  const tagsFound: string[] = [];
+  const nonAuthorTokens: string[] = [];
   
-  // We'll collect all brackets, but typically the first one is the category and others might be author
+  // Collect all brackets, author-like token can still be parsed separately.
   while ((match = tagRegex.exec(nameWithoutExt)) !== null) {
       const content = match[1];
-      // Check if it looks like an author tag e.g. [Er'19]
+      // Detect author marker, e.g. [Er'19].
       if (/^[A-Za-z]+'\d{2}$/.test(content)) {
           metadata.authors = content;
       } else {
-          tagsFound.push(content.toUpperCase());
+          nonAuthorTokens.push(content);
       }
   }
-  if (tagsFound.length > 0) {
-      metadata.tags = tagsFound;
+
+  if (nonAuthorTokens.length > 0) {
+      metadata.docType = resolveDocumentTypeToken(nonAuthorTokens[0]);
   }
 
   // Remove bracketed parts to clean up title

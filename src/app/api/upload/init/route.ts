@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { pickDrive } from "@/lib/drive/router";
 import { getDriveAdapter } from "@/lib/drive/adapter";
-import { ALLOWED_MIME_TYPES } from "@/types";
+import { ALLOWED_MIME_TYPES, hasMinRole } from "@/types";
 
 /** POST /api/upload/init — Initialize resumable upload */
 export async function POST(req: NextRequest) {
@@ -10,8 +10,8 @@ export async function POST(req: NextRequest) {
     if (!session?.user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const user = session.user as { status?: string };
-    if (user.status !== "active") {
+    const user = session.user as { role?: string; status?: string };
+    if (user.status !== "active" || !hasMinRole(user.role ?? "", "admin")) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

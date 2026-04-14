@@ -47,6 +47,7 @@ export const files = sqliteTable("files", {
     id: text("id").primaryKey(),
     title: text("title").notNull(),
     subject: text("subject").notNull(),
+    docType: text("doc_type"),
     tags: text("tags"), // JSON array
     abstract: text("abstract"),
     year: integer("year"),
@@ -59,6 +60,20 @@ export const files = sqliteTable("files", {
     gdriveFileId: text("gdrive_file_id").notNull(),
     visibility: text("visibility").notNull().default("members"), // 'members' | 'admin_only'
     uploaderId: text("uploader_id").notNull(),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+});
+
+// ─── Document Types ────────────────────────────────────────────────────
+// Controlled vocabulary for academic document classification.
+export const documentTypes = sqliteTable("document_types", {
+    id: text("id").primaryKey(),
+    code: text("code").notNull().unique(),
+    label: text("label").notNull(),
+    isSystem: integer("is_system").notNull().default(0), // 1 = seeded defaults
+    isActive: integer("is_active").notNull().default(1), // 1 = selectable in forms
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdBy: text("created_by"),
     createdAt: integer("created_at").notNull(),
     updatedAt: integer("updated_at").notNull(),
 });

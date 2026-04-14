@@ -16,6 +16,9 @@ const PUBLIC_ROUTES = [
 // Routes requiring admin+ role
 const ADMIN_ROUTES = ["/admin", "/api/admin"];
 
+// Upload routes requiring admin+ role
+const UPLOAD_ROUTES = ["/upload", "/api/upload"];
+
 // Routes requiring superadmin only
 const SUPERADMIN_ROUTES = ["/admin/settings", "/api/admin/settings"];
 
@@ -90,6 +93,16 @@ export default auth((req) => {
     // Admin routes
     if (ADMIN_ROUTES.some((route) => pathname.startsWith(route))) {
         if (userWeight < ROLE_WEIGHT.admin) {
+            return NextResponse.redirect(new URL("/", req.url));
+        }
+    }
+
+    // Upload routes
+    if (UPLOAD_ROUTES.some((route) => pathname.startsWith(route))) {
+        if (userWeight < ROLE_WEIGHT.admin) {
+            if (pathname.startsWith("/api/")) {
+                return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+            }
             return NextResponse.redirect(new URL("/", req.url));
         }
     }

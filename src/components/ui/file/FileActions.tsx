@@ -1,16 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input, Textarea, Select } from "@/components/ui/Input";
-import { Badge } from "@/components/ui/Badge";
+import { DocumentTypeSelector } from "@/components/ui/file/DocumentTypeSelector";
+import {
+    DEFAULT_DOCUMENT_TYPE_OPTIONS,
+    DocumentTypeOption,
+    normalizeDocumentTypeCode,
+} from "@/types";
 
 // Recreate the minimal File structure we need
 type FileData = {
     id: string;
     title: string;
     subject: string;
+    docType?: string | null;
     tags: string | null;
     abstract: string | null;
     year: number | null;
@@ -31,40 +37,60 @@ export function FileActions({
     const router = useRouter();
     const canEdit = isAdmin || file.uploaderId === currentUserId;
 
-    // Fallbacks incase of null
-    const initialTags = (() => {
-        try {
-            return file.tags ? (JSON.parse(file.tags) as string[]) : [];
-        } catch {
-            return [];
-        }
-    })();
-
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [documentTypes, setDocumentTypes] = useState<DocumentTypeOption[]>(
+        DEFAULT_DOCUMENT_TYPE_OPTIONS
+    );
 
     // Form state
     const [title, setTitle] = useState(file.title);
     const [subject, setSubject] = useState(file.subject);
+    const [docType, setDocType] = useState(normalizeDocumentTypeCode(file.docType || "OTHER"));
     const [year, setYear] = useState(file.year ? String(file.year) : "");
     const [authors, setAuthors] = useState(file.authors || "");
     const [abstract, setAbstract] = useState(file.abstract || "");
-    const [tags, setTags] = useState<string[]>(initialTags);
-    const [tagInput, setTagInput] = useState("");
     const [visibility, setVisibility] = useState(file.visibility);
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
-    // Tag helpers
-    const addTag = () => {
-        const t = tagInput.trim();
-        if (t && !tags.includes(t)) { setTags([...tags, t]); setTagInput(""); }
-    };
-    const removeTag = (tag: string) => { setTags(tags.filter((t) => t !== tag)); };
+    useEffect(() => {
+        let alive = true;
+
+        const loadTypes = async () => {
+            try {
+                const res = await fetch("/api/document-types");
+                if (!res.ok) return;
+
+                const data = await res.json();
+                const fetched = Array.isArray(data.types)
+                    ? data.types.map((t: Record<string, unknown>) => ({
+                          code: String(t.code ?? ""),
+                          label: String(t.label ?? ""),
+                          isSystem: t.isSystem === 1 || t.isSystem === true,
+                          isActive: t.isActive === 1 || t.isActive === true,
+                          sortOrder: Number(t.sortOrder ?? 0),
+                      }))
+                    : [];
+
+                if (alive && fetched.length > 0) {
+                    setDocumentTypes(fetched);
+                }
+            } catch (err) {
+                console.error("[FileActions] Gagal memuat tipe dokumen:", err);
+            }
+        };
+
+        loadTypes();
+
+        return () => {
+            alive = false;
+        };
+    }, []);
 
     const handleSave = async () => {
-        if (!title.trim() || !subject.trim()) {
-            setError("Judul dan Mata Kuliah wajib diisi.");
+        if (!title.trim() || !subject.trim() || !docType.trim()) {
+            setError("Judul, Mata Kuliah, dan Tipe Dokumen wajib diisi.");
             return;
         }
 
@@ -78,7 +104,7 @@ export function FileActions({
                 body: JSON.stringify({
                     title: title.trim(),
                     subject: subject.trim(),
-                    tags: tags.length > 0 ? JSON.stringify(tags) : null,
+                    docType: normalizeDocumentTypeCode(docType),
                     abstract: abstract.trim() || null,
                     year: year ? parseInt(year) : null,
                     authors: authors.trim() || null,
@@ -164,6 +190,15 @@ export function FileActions({
                                 />
                             </div>
 
+                            <DocumentTypeSelector
+                                id="edit-doc-type"
+                                label="TIPE DOKUMEN"
+                                value={docType}
+                                options={documentTypes}
+                                onChange={setDocType}
+                                required
+                            />
+
                             <Input
                                 id="edit-authors"
                                 label="PENULIS"
@@ -171,39 +206,6 @@ export function FileActions({
                                 value={authors}
                                 onChange={(e) => setAuthors(e.target.value)}
                             />
-
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-xs font-medium text-on-surface/60 uppercase tracking-wide">TAGS</label>
-                                <div className="flex flex-wrap gap-1.5 mb-1.5">
-                                    {tags.map((tag) => (
-                                        <Badge key={tag} variant="data" className="gap-1 flex items-center">
-                                            {tag}
-                                            <button
-                                                type="button"
-                                                onClick={() => removeTag(tag)}
-                                                className="text-on-secondary-container/60 hover:text-on-secondary-container ml-1 font-bold"
-                                            >
-                                                ×
-                                            </button>
-                                        </Badge>
-                                    ))}
-                                </div>
-                                <div className="flex gap-2">
-                                    <input
-                                        value={tagInput}
-                                        onChange={(e) => setTagInput(e.target.value)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === "Enter") {
-                                                e.preventDefault();
-                                                addTag();
-                                            }
-                                        }}
-                                        placeholder="Tambah tag dan tekan Enter..."
-                                        className="flex-1 px-3 py-2 rounded-md bg-surface-container-low text-sm text-on-surface placeholder:text-on-surface/40 focus:outline-none ghost-border focus:ghost-border-focus"
-                                    />
-                                    <Button type="button" variant="secondary" size="sm" onClick={addTag}>+ Tag</Button>
-                                </div>
-                            </div>
 
                             <Textarea
                                 id="edit-abstract"

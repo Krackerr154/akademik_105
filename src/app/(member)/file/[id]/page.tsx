@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { FilePreview } from "@/components/ui/file/FilePreview";
 import { FileActions } from "@/components/ui/file/FileActions";
 import { auth } from "@/lib/auth";
+import { formatDocumentTypeLabel, normalizeDocumentTypeCode } from "@/types";
 
 export default async function FileDetailPage({ params }: { params: { id: string } }) {
     const fileId = params.id;
@@ -28,11 +29,20 @@ export default async function FileDetailPage({ params }: { params: { id: string 
     // Format size
     const sizeMb = (file.sizeBytes / (1024 * 1024)).toFixed(2);
 
-    // Parse tags safely
-    let parsedTags: string[] = [];
+    // Resolve document type with fallback from legacy tags data.
+    let resolvedDocType = normalizeDocumentTypeCode(file.docType || "");
     try {
-        if (file.tags) parsedTags = JSON.parse(file.tags);
+        if (!resolvedDocType && file.tags) {
+            const parsedTags = JSON.parse(file.tags) as string[];
+            if (parsedTags.length > 0) {
+                resolvedDocType = normalizeDocumentTypeCode(parsedTags[0]);
+            }
+        }
     } catch { }
+
+    if (!resolvedDocType) {
+        resolvedDocType = "OTHER";
+    }
 
     return (
         <div>
@@ -47,11 +57,9 @@ export default async function FileDetailPage({ params }: { params: { id: string 
                         <div className="grid grid-cols-2 gap-y-4 gap-x-8">
                             <div><p className="text-xs text-on-surface/50 uppercase tracking-wide mb-1">MATA KULIAH</p><Badge variant="subject">{file.subject || "–"}</Badge></div>
                             <div>
-                                <p className="text-xs text-on-surface/50 uppercase tracking-wide mb-1">TAGS</p>
+                                <p className="text-xs text-on-surface/50 uppercase tracking-wide mb-1">TIPE DOKUMEN</p>
                                 <div className="flex gap-1 flex-wrap">
-                                    {parsedTags.length > 0 ? parsedTags.map(tag => (
-                                        <Badge key={tag} variant="data">{tag}</Badge>
-                                    )) : <Badge variant="data">–</Badge>}
+                                    <Badge variant="data">{formatDocumentTypeLabel(resolvedDocType)}</Badge>
                                 </div>
                             </div>
                             <div><p className="text-xs text-on-surface/50 uppercase tracking-wide mb-1">PENULIS</p><p className="text-sm text-on-surface">{file.authors || "–"}</p></div>

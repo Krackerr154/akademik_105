@@ -9,6 +9,7 @@ interface FileData {
     id: string;
     title: string;
     subject: string;
+    docType?: string | null;
     tags?: string | null;
     abstract?: string | null;
     authors?: string | null;
@@ -47,7 +48,7 @@ function SearchContent() {
     // Fuse.js fuzzy search instance
     const fuse = useMemo(() => {
         return new Fuse(files, {
-            keys: ["title", "subject", "tags", "abstract", "authors"],
+            keys: ["title", "subject", "docType", "tags", "abstract", "authors"],
             threshold: 0.4,
             ignoreLocation: true,
         });
@@ -89,7 +90,7 @@ function SearchContent() {
                     type="text"
                     value={query}
                     onChange={(e) => handleQueryChange(e.target.value)}
-                    placeholder="Cari berdasarkan judul, mata kuliah, tag, atau penulis..."
+                    placeholder="Cari berdasarkan judul, mata kuliah, tipe dokumen, atau penulis..."
                     className="w-full pl-12 pr-4 py-3 rounded-md bg-surface-container-low text-on-surface placeholder:text-on-surface/40 focus:outline-none ghost-border focus:ghost-border-focus transition-shadow duration-150"
                 />
             </div>

@@ -1,9 +1,10 @@
 import { auth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-import { files, auditLog } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { files, auditLog, documentTypes } from "@/db/schema";
+import { and, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { getDriveAdapter } from "@/lib/drive/adapter";
+import { hasMinRole, normalizeDocumentTypeCode } from "@/types";
 
 /**
  * POST /api/upload/complete — Save metadata after client completes upload
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const user = session.user as { id?: string; role?: string; status?: string };
-    if (user.status !== "active") {
+    if (user.status !== "active" || !hasMinRole(user.role ?? "", "admin")) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -26,6 +27,7 @@ export async function POST(req: NextRequest) {
         gdriveFileId,
         title,
         subject,
+        docType,
         tags,
         abstract,
         year,
@@ -40,6 +42,7 @@ export async function POST(req: NextRequest) {
         gdriveFileId: string;
         title: string;
         subject: string;
+        docType: string;
         tags?: string;
         abstract?: string;
         year?: number;
@@ -51,7 +54,7 @@ export async function POST(req: NextRequest) {
         visibility?: string;
     };
 
-    if (!driveId || !gdriveFileId || !title || !subject || !mimeType || !sha256) {
+    if (!driveId || !gdriveFileId || !title || !subject || !docType || !mimeType || !sha256) {
         return NextResponse.json(
             { error: "Field wajib belum lengkap" },
             { status: 400 }
@@ -63,6 +66,15 @@ export async function POST(req: NextRequest) {
     if (!(ALLOWED_MIME_TYPES as readonly string[]).includes(mimeType)) {
         return NextResponse.json(
             { error: `Tipe file tidak didukung: ${mimeType}` },
+            { status: 400 }
+        );
+    }
+
+    // Validate document type against active controlled vocabulary
+    const normalizedDocType = normalizeDocumentTypeCode(docType);
+    if (!normalizedDocType) {
+        return NextResponse.json(
+            { error: "Tipe dokumen wajib dipilih" },
             { status: 400 }
         );
     }
@@ -83,6 +95,25 @@ export async function POST(req: NextRequest) {
 
     // Check SHA-256 duplicate
     const db = getDb();
+
+    const validType = await db
+        .select({ id: documentTypes.id })
+        .from(documentTypes)
+        .where(
+            and(
+                eq(documentTypes.code, normalizedDocType),
+                eq(documentTypes.isActive, 1)
+            )
+        )
+        .limit(1);
+
+    if (validType.length === 0) {
+        return NextResponse.json(
+            { error: `Tipe dokumen tidak valid: ${normalizedDocType}` },
+            { status: 400 }
+        );
+    }
+
     const duplicate = await db
         .select({ id: files.id })
         .from(files)
@@ -105,6 +136,7 @@ export async function POST(req: NextRequest) {
             id: fileId,
             title,
             subject,
+            docType: normalizedDocType,
             tags: tags ?? null,
             abstract: abstract ?? null,
             year: year ?? null,

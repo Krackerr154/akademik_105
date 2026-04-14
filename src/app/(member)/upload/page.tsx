@@ -1,11 +1,11 @@
 ﻿
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { Input, Textarea } from "@/components/ui/Input";
-import { Badge } from "@/components/ui/Badge";
+import { Input } from "@/components/ui/Input";
+
 import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE, FILE_TYPE_LABELS } from "@/types";
 import { formatBytes } from "@/lib/utils";
 import { extractMetadataFromFilename, ExtractedMetadata } from "@/lib/metadata-extractor";
@@ -83,16 +83,16 @@ export default function BatchUploadPage() {
     };
 
     // Drag and drop
-    const handleDragOver = useCallback((e: React.DragEvent) => {
+    const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
         setDragOver(true);
-    }, []);
-    const handleDragLeave = useCallback(() => setDragOver(false), []);
-    const handleDrop = useCallback((e: React.DragEvent) => {
+    };
+    const handleDragLeave = () => setDragOver(false);
+    const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
         setDragOver(false);
         handleFilesSelect(e.dataTransfer.files);
-    }, []);
+    };
 
     // SHA-256 hash calculation
     const computeSha256 = async (file: File): Promise<string> => {
@@ -219,7 +219,7 @@ export default function BatchUploadPage() {
         setGlobalYear("");
     };
 
-    const setItemMetadata = (index: number, key: keyof FileItem["metadata"], value: any) => {
+    const setItemMetadata = (index: number, key: keyof FileItem["metadata"], value: string | string[]) => {
         setFilesQueue(q => {
             const newQ = [...q];
             newQ[index].metadata = { ...newQ[index].metadata, [key]: value };
@@ -253,7 +253,7 @@ export default function BatchUploadPage() {
 
             {/* STEP 1: SELECT FILES */}
             {step === "SELECT" && (
-                <div className="bg-surface-container-lowest rounded-md shadow-ambient p-8 text-center border-2 border-dashed border-outline-variant/30 hover:border-secondary/40 cursor-pointer"
+                <div className={`bg-surface-container-lowest rounded-md shadow-ambient p-8 text-center border-2 border-dashed cursor-pointer transition-colors ${dragOver ? "border-secondary bg-secondary/5" : "border-outline-variant/30 hover:border-secondary/40"}`}
                     onClick={() => fileInputRef.current?.click()}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
@@ -312,7 +312,7 @@ export default function BatchUploadPage() {
                             <select 
                                 className="w-full bg-surface text-on-surface p-2 rounded border border-outline/30"
                                 value={globalVisibility} 
-                                onChange={e => setGlobalVisibility(e.target.value as any)}
+                                onChange={e => setGlobalVisibility(e.target.value as "members" | "admin_only")}
                             >
                                 <option value="members">Anggota</option>
                                 <option value="admin_only">Hanya Admin</option>

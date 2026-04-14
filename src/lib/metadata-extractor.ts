@@ -6,14 +6,8 @@ export interface ExtractedMetadata {
   authors: string;
 }
 
-const SUBJECT_MAP: Record<string, string> = {
-  KUGU: "KI3131",
-  SKA: "KI2231",
-  LTKK: "KI3231",
-};
-
 export function extractMetadataFromFilename(filename: string): ExtractedMetadata {
-  let nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
+  const nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
   
   const metadata: ExtractedMetadata = {
     title: nameWithoutExt,

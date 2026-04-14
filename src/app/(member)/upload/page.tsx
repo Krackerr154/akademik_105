@@ -290,88 +290,173 @@ export default function BatchUploadPage() {
                                 onChange={(e) => handleFilesSelect(e.target.files)}
                             />
                             <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>Tambah File</Button>
-                            <Button onClick={startBatchUpload}>Mulai Upload</Button>
-                        </div>
-                    </div>
-
-                    <div className="bg-secondary/5 p-4 rounded-md border border-secondary/20 flex flex-wrap gap-4 items-end">
-                        <div className="flex-1 min-w-[200px]">
-                            <Input 
-                                id="global-sub" label="MATA KULIAH (Semua)" 
-                                value={globalSubject} onChange={e => setGlobalSubject(e.target.value)} 
-                            />
-                        </div>
-                        <div className="flex-1 min-w-[100px]">
-                            <Input 
-                                id="global-year" label="TAHUN (Semua)" 
-                                value={globalYear} onChange={e => setGlobalYear(e.target.value)} 
-                            />
-                        </div>
-                        <div className="flex-1 min-w-[100px]">
-                            <p className="text-xs text-on-surface/60 mb-2">VISIBILITAS (Semua)</p>
-                            <select 
-                                className="w-full bg-surface text-on-surface p-2 rounded border border-outline/30"
-                                value={globalVisibility} 
-                                onChange={e => setGlobalVisibility(e.target.value as "members" | "admin_only")}
+                            <Button 
+                                onClick={startBatchUpload}
+                                disabled={filesQueue.some((f) => !f.metadata.title.trim() || !f.metadata.subject.trim())}
+                                className={filesQueue.some((f) => !f.metadata.title.trim() || !f.metadata.subject.trim()) ? "opacity-50 cursor-not-allowed" : ""}
+                                title={filesQueue.some((f) => !f.metadata.title.trim() || !f.metadata.subject.trim()) ? "Pastikan Judul dan Mata Kuliah terisi" : ""}
                             >
-                                <option value="members">Anggota</option>
-                                <option value="admin_only">Hanya Admin</option>
-                            </select>
+                                Mulai Upload
+                            </Button>
                         </div>
-                        <Button variant="secondary" onClick={applyGlobalSettings}>Terapkan</Button>
                     </div>
 
-                    <div className="grid gap-4">
-                        {filesQueue.map((item, i) => (
-                            <div key={item.id} className="bg-surface-container-lowest p-5 rounded-md shadow-sm border border-outline-variant/30 flex flex-col md:flex-row gap-6">
-                                <div className="flex flex-col gap-2 md:w-1/3 border-r border-outline-variant/30 pr-4">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2 overflow-hidden" title={item.file.name}>
-                                            <FileIcon className="w-5 h-5 text-secondary shrink-0" />
-                                            <span className="font-medium text-sm truncate block">{item.file.name}</span>
-                                        </div>
-                                        <button onClick={() => removeItem(i)} className="text-error/70 hover:text-error shrink-0">
-                                            <TrashIcon className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                    <div className="text-xs text-on-surface/50 font-mono">
-                                        {formatBytes(item.file.size)} • {FILE_TYPE_LABELS[item.file.type] || "FILE"}
-                                    </div>
-                                    <div className="mt-2 text-xs">
-                                        <label className="text-on-surface/60">Privasi:</label>
-                                        <select className="ml-2 bg-transparent text-primary outline-none" value={item.metadata.visibility} onChange={e => setItemMetadata(i, "visibility", e.target.value)}>
-                                            <option value="members">Semua Anggota</option>
-                                            <option value="admin_only">Hanya Admin</option>
-                                        </select>
+                    {filesQueue.length > 1 && (
+                        <div className="bg-secondary/5 p-4 rounded-md border border-secondary/20 flex flex-wrap gap-4 items-end">
+                            <div className="flex-1 min-w-[200px]">
+                                <Input 
+                                    id="global-sub" label="MATA KULIAH (Semua)" 
+                                    value={globalSubject} onChange={e => setGlobalSubject(e.target.value)} 
+                                />
+                            </div>
+                            <div className="flex-1 min-w-[100px]">
+                                <Input 
+                                    id="global-year" label="TAHUN (Semua)" 
+                                    value={globalYear} onChange={e => setGlobalYear(e.target.value)} 
+                                />
+                            </div>
+                            <div className="flex-1 min-w-[100px]">
+                                <p className="text-xs text-on-surface/60 mb-2">VISIBILITAS (Semua)</p>
+                                <select 
+                                    className="w-full bg-surface text-on-surface p-2 rounded border border-outline/30 focus:border-secondary focus:outline-none"
+                                    value={globalVisibility} 
+                                    onChange={e => setGlobalVisibility(e.target.value as "members" | "admin_only")}
+                                >
+                                    <option value="members">Anggota</option>
+                                    <option value="admin_only">Hanya Admin</option>
+                                </select>
+                            </div>
+                            <Button variant="secondary" onClick={applyGlobalSettings}>Terapkan</Button>
+                        </div>
+                    )}
+
+                    {filesQueue.length === 1 ? (
+                        <div className="bg-surface-container-lowest p-6 rounded-md shadow-sm border border-outline-variant/30 flex flex-col md:flex-row gap-8">
+                            <div className="md:w-1/3 flex flex-col gap-4 border-r border-outline-variant/30 pr-6">
+                                <div className="p-4 bg-surface-container-low rounded-md flex flex-col items-center text-center gap-3">
+                                    <FileIcon className="w-12 h-12 text-secondary" />
+                                    <div>
+                                        <p className="font-semibold text-sm break-all">{filesQueue[0].file.name}</p>
+                                        <p className="text-xs text-on-surface/60 mt-1">{formatBytes(filesQueue[0].file.size)} • {FILE_TYPE_LABELS[filesQueue[0].file.type] || "FILE"}</p>
                                     </div>
                                 </div>
-                                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="md:col-span-2">
-                                        <Input
-                                            id={`title-${i}`} label="JUDUL"
-                                            value={item.metadata.title} onChange={e => setItemMetadata(i, "title", e.target.value)}
-                                        />
-                                    </div>
+                                
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-xs font-semibold text-on-surface/70">Visibilitas Akses</label>
+                                    <select 
+                                        className="w-full bg-surface text-on-surface p-2.5 rounded border border-outline/30 focus:border-secondary focus:outline-none text-sm" 
+                                        value={filesQueue[0].metadata.visibility} 
+                                        onChange={e => setItemMetadata(0, "visibility", e.target.value)}
+                                    >
+                                        <option value="members">Semua Anggota</option>
+                                        <option value="admin_only">Hanya Admin</option>
+                                    </select>
+                                </div>
+                                <Button variant="secondary" className="mt-auto w-full text-error border-error/20 hover:bg-error/10 hover:border-error/40 hover:text-error" onClick={() => removeItem(0)}>
+                                    Batal / Hapus
+                                </Button>
+                            </div>
+
+                            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div className="md:col-span-2">
                                     <Input
-                                        id={`subject-${i}`} label="KODE / MATKUL"
-                                        value={item.metadata.subject} onChange={e => setItemMetadata(i, "subject", e.target.value)}
+                                        id="single-title" label="JUDUL DOKUMEN *"
+                                        value={filesQueue[0].metadata.title} onChange={e => setItemMetadata(0, "title", e.target.value)}
+                                        required
                                     />
+                                </div>
+                                <Input
+                                    id="single-subject" label="MATA KULIAH / KODE *"
+                                    value={filesQueue[0].metadata.subject} onChange={e => setItemMetadata(0, "subject", e.target.value)}
+                                    required
+                                />
+                                <Input
+                                    id="single-year" label="TAHUN ACARA"
+                                    value={filesQueue[0].metadata.year} onChange={e => setItemMetadata(0, "year", e.target.value)}
+                                />
+                                <div className="md:col-span-2">
                                     <Input
-                                        id={`year-${i}`} label="TAHUN"
-                                        value={item.metadata.year} onChange={e => setItemMetadata(i, "year", e.target.value)}
+                                        id="single-authors" label="PENULIS / SUMBER"
+                                        value={filesQueue[0].metadata.authors} onChange={e => setItemMetadata(0, "authors", e.target.value)}
                                     />
-                                    <div className="md:col-span-2 text-xs">
-                                        <p className="text-on-surface/60 mb-1">TAG (Pisahkan dengan koma)</p>
-                                        <input 
-                                            className="w-full bg-surface text-on-surface px-3 py-2 rounded border border-outline/30"
-                                            value={item.metadata.tags.join(", ")}
-                                            onChange={e => setItemTagsStr(i, e.target.value)} 
-                                        />
-                                    </div>
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="text-xs font-bold text-on-surface/60 uppercase tracking-wider mb-1 block">Abstrak / Deskripsi Singkat</label>
+                                    <textarea
+                                        className="w-full bg-surface text-on-surface px-3 py-2 rounded-md border border-outline/30 focus:border-secondary focus:ring-1 focus:ring-secondary/50 outline-none transition-colors text-sm min-h-[80px]"
+                                        value={filesQueue[0].metadata.abstract}
+                                        onChange={e => setItemMetadata(0, "abstract", e.target.value)}
+                                        placeholder="Tambahkan detail mengenai file ini jika diperlukan..."
+                                    />
+                                </div>
+                                <div className="md:col-span-2 text-xs">
+                                    <label className="text-xs font-bold text-on-surface/60 uppercase tracking-wider mb-1 block">Tagging (Pisahkan dengan koma)</label>
+                                    <input 
+                                        className="w-full bg-surface text-on-surface px-3 py-2 rounded border border-outline/30 focus:border-secondary focus:outline-none"
+                                        value={filesQueue[0].metadata.tags.join(", ")}
+                                        onChange={e => setItemTagsStr(0, e.target.value)} 
+                                        placeholder="uts, 2021, solusi"
+                                    />
                                 </div>
                             </div>
-                        ))}
-                    </div>
+                        </div>
+                    ) : (
+                        <div className="grid gap-4">
+                            {filesQueue.map((item, i) => (
+                                <div key={item.id} className="bg-surface-container-lowest p-5 rounded-md shadow-sm border border-outline-variant/30 flex flex-col md:flex-row gap-6 hover:border-outline-variant/60 transition-colors">
+                                    <div className="flex flex-col gap-2 md:w-1/3 border-r border-outline-variant/30 pr-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2 overflow-hidden" title={item.file.name}>
+                                                <FileIcon className="w-5 h-5 text-secondary shrink-0" />
+                                                <span className="font-medium text-sm truncate block">{item.file.name}</span>
+                                            </div>
+                                            <button onClick={() => removeItem(i)} className="text-error/70 hover:text-error shrink-0 p-1">
+                                                <TrashIcon className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                        <div className="text-xs text-on-surface/50 font-mono">
+                                            {formatBytes(item.file.size)} • {FILE_TYPE_LABELS[item.file.type] || "FILE"}
+                                        </div>
+                                        <div className="mt-2 text-xs">
+                                            <label className="text-on-surface/60 block mb-1">Privasi:</label>
+                                            <select 
+                                                className="w-full bg-surface-container text-primary outline-none p-1.5 rounded border border-outline/20" 
+                                                value={item.metadata.visibility} 
+                                                onChange={e => setItemMetadata(i, "visibility", e.target.value)}
+                                            >
+                                                <option value="members">Semua Anggota</option>
+                                                <option value="admin_only">Hanya Admin</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="md:col-span-2">
+                                            <Input
+                                                id={`title-${i}`} label="JUDUL *"
+                                                value={item.metadata.title} onChange={e => setItemMetadata(i, "title", e.target.value)}
+                                            />
+                                        </div>
+                                        <Input
+                                            id={`subject-${i}`} label="KODE / MATKUL *"
+                                            value={item.metadata.subject} onChange={e => setItemMetadata(i, "subject", e.target.value)}
+                                        />
+                                        <Input
+                                            id={`year-${i}`} label="TAHUN"
+                                            value={item.metadata.year} onChange={e => setItemMetadata(i, "year", e.target.value)}
+                                        />
+                                        <div className="md:col-span-2 text-xs">
+                                            <p className="text-on-surface/60 font-semibold mb-1">TAG (Pisahkan dengan koma)</p>
+                                            <input 
+                                                className="w-full bg-surface text-on-surface px-3 py-2 rounded border border-outline/30 focus:border-secondary focus:outline-none"
+                                                value={item.metadata.tags.join(", ")}
+                                                onChange={e => setItemTagsStr(i, e.target.value)} 
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
 

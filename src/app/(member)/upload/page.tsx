@@ -1,3 +1,4 @@
+﻿
 "use client";
 
 import { useState, useRef, useCallback } from "react";
@@ -7,40 +8,39 @@ import { Input, Textarea } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { ALLOWED_MIME_TYPES, MAX_FILE_SIZE, FILE_TYPE_LABELS } from "@/types";
 import { formatBytes } from "@/lib/utils";
+import { extractMetadataFromFilename, ExtractedMetadata } from "@/lib/metadata-extractor";
+import pLimit from "p-limit";
 
-type UploadStep = "idle" | "uploading" | "completing" | "done" | "error";
+// Icons 
+import { UploadCloudIcon, FileCheckIcon, TrashIcon, AlertCircleIcon, FileIcon } from "lucide-react";
 
-export default function UploadPage() {
+type UploadStatus = "idle" | "uploading" | "done" | "error";
+type FlowStep = "SELECT" | "REVIEW" | "UPLOAD" | "DONE";
+
+interface FileItem {
+  id: string;
+  file: File;
+  metadata: ExtractedMetadata & { visibility: "members" | "admin_only"; subject: string; abstract: string; title: string; year: string; authors: string; tags: string[] };
+  status: UploadStatus;
+  progress: number;
+  error?: string;
+}
+
+export default function BatchUploadPage() {
     const router = useRouter();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // File state
-    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [step, setStep] = useState<FlowStep>("SELECT");
     const [dragOver, setDragOver] = useState(false);
+    const [filesQueue, setFilesQueue] = useState<FileItem[]>([]);
+    const [overallProgress, setOverallProgress] = useState(0);
 
-    // Metadata state
-    const [title, setTitle] = useState("");
-    const [subject, setSubject] = useState("");
-    const [year, setYear] = useState("");
-    const [authors, setAuthors] = useState("");
-    const [tags, setTags] = useState<string[]>([]);
-    const [tagInput, setTagInput] = useState("");
-    const [abstract, setAbstract] = useState("");
-    const [visibility, setVisibility] = useState<"members" | "admin_only">("members");
+    // Global "Apply to All" settings
+    const [globalSubject, setGlobalSubject] = useState("");
+    const [globalYear, setGlobalYear] = useState("");
+    const [globalVisibility, setGlobalVisibility] = useState<"members" | "admin_only">("members");
 
-    // Upload state
-    const [step, setStep] = useState<UploadStep>("idle");
-    const [progress, setProgress] = useState(0);
-    const [errorMsg, setErrorMsg] = useState("");
-
-    // Tag helpers
-    const addTag = () => {
-        const t = tagInput.trim();
-        if (t && !tags.includes(t)) { setTags([...tags, t]); setTagInput(""); }
-    };
-    const removeTag = (tag: string) => { setTags(tags.filter((t) => t !== tag)); };
-
-    // File validation
+    // Helpers
     const validateFile = (file: File): string | null => {
         if (!(ALLOWED_MIME_TYPES as readonly string[]).includes(file.type)) {
             return `Tipe file tidak didukung: ${file.type}`;
@@ -51,19 +51,34 @@ export default function UploadPage() {
         return null;
     };
 
-    // File selection handler
-    const handleFileSelect = (file: File) => {
-        const err = validateFile(file);
-        if (err) {
-            setErrorMsg(err);
-            return;
-        }
-        setSelectedFile(file);
-        setErrorMsg("");
-        // Auto-fill title from filename if empty
-        if (!title) {
-            const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
-            setTitle(nameWithoutExt);
+    const handleFilesSelect = (files: FileList | null) => {
+        if (!files || files.length === 0) return;
+        
+        const newItems: FileItem[] = [];
+        Array.from(files).forEach((file) => {
+            const err = validateFile(file);
+            if (err) {
+                console.warn(`File skipped: ${file.name} - ${err}`);
+                return;
+            }
+
+            const extracted = extractMetadataFromFilename(file.name);
+            newItems.push({
+                id: crypto.randomUUID(),
+                file,
+                metadata: {
+                    ...extracted,
+                    visibility: "members",
+                    abstract: "",
+                },
+                status: "idle",
+                progress: 0,
+            });
+        });
+
+        if (newItems.length > 0) {
+            setFilesQueue((prev) => [...prev, ...newItems]);
+            setStep("REVIEW");
         }
     };
 
@@ -76,10 +91,8 @@ export default function UploadPage() {
     const handleDrop = useCallback((e: React.DragEvent) => {
         e.preventDefault();
         setDragOver(false);
-        const file = e.dataTransfer.files[0];
-        if (file) handleFileSelect(file);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [title]);
+        handleFilesSelect(e.dataTransfer.files);
+    }, []);
 
     // SHA-256 hash calculation
     const computeSha256 = async (file: File): Promise<string> => {
@@ -89,353 +102,329 @@ export default function UploadPage() {
         return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
     };
 
-    // Upload flow
-    const handleUpload = async () => {
-        if (!selectedFile || !title.trim() || !subject.trim()) {
-            setErrorMsg("File, judul, dan mata kuliah wajib diisi.");
-            return;
-        }
+    // Upload Execution
+    const startBatchUpload = async () => {
+        setStep("UPLOAD");
+        const limit = pLimit(2);
+        let completed = 0;
+        
+        const uploadTasks = filesQueue.map((item, index) => limit(async () => {
+            const updateItemStatus = (updates: Partial<FileItem>) => {
+                setFilesQueue(prev => {
+                    const newQ = [...prev];
+                    // Defensive check
+                    if (newQ[index]) {
+                        newQ[index] = { ...newQ[index], ...updates };
+                    }
+                    return newQ;
+                });
+            };
 
-        setStep("uploading");
-        setErrorMsg("");
-        setProgress(0);
+            try {
+                updateItemStatus({ status: "uploading", progress: 10 });
+                const { file, metadata } = item;
 
-        try {
-            // Step 1: Init upload — get resumable URI from server
-            const initRes = await fetch("/api/upload/init", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    fileName: selectedFile.name,
-                    mimeType: selectedFile.type,
-                    fileSize: selectedFile.size,
-                }),
-            });
+                // Step 1: Init
+                const initRes = await fetch("/api/upload/init", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        fileName: file.name,
+                        mimeType: file.type,
+                        fileSize: file.size,
+                    }),
+                });
 
-            if (!initRes.ok) {
-                const data = await initRes.json();
-                throw new Error(data.error ?? "Gagal menginisialisasi upload");
+                if (!initRes.ok) {
+                    const data = await initRes.json();
+                    throw new Error(data.error ?? "Gagal menginisialisasi upload");
+                }
+
+                const { driveId, uploadUri } = await initRes.json();
+                updateItemStatus({ progress: 20 });
+
+                // Step 2: Upload to Drive
+                const uploadRes = await fetch(uploadUri, {
+                    method: "PUT",
+                    headers: { "Content-Type": file.type },
+                    body: file,
+                });
+
+                if (!uploadRes.ok) {
+                    throw new Error(`Upload gagal: ${uploadRes.status}`);
+                }
+
+                const driveData = await uploadRes.json();
+                const gdriveFileId = driveData.id;
+                if (!gdriveFileId) throw new Error("Google Drive tidak mengembalikan ID file");
+
+                updateItemStatus({ progress: 70 });
+
+                // Step 3: Calculate SHA-256
+                const sha256 = await computeSha256(file);
+                updateItemStatus({ progress: 85 });
+
+                // Step 4: Complete DB
+                const completeRes = await fetch("/api/upload/complete", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        driveId,
+                        gdriveFileId,
+                        title: metadata.title.trim(),
+                        subject: metadata.subject.trim(),
+                        tags: metadata.tags.length > 0 ? JSON.stringify(metadata.tags) : null,
+                        abstract: metadata.abstract.trim() || null,
+                        year: metadata.year ? parseInt(metadata.year) : null,
+                        authors: metadata.authors.trim() || null,
+                        mimeType: file.type,
+                        sizeBytes: file.size,
+                        sha256,
+                        visibility: metadata.visibility,
+                    }),
+                });
+
+                if (!completeRes.ok) {
+                    const data = await completeRes.json();
+                    throw new Error(data.error ?? "Gagal menyimpan metadata");
+                }
+
+                updateItemStatus({ status: "done", progress: 100 });
+            } catch (error) {
+                updateItemStatus({ 
+                    status: "error", 
+                    error: error instanceof Error ? error.message : "Kesalahan yang tidak diketahui" 
+                });
+            } finally {
+                completed++;
+                setOverallProgress(Math.round((completed / filesQueue.length) * 100));
             }
+        }));
 
-            const { driveId, uploadUri } = await initRes.json();
-            setProgress(20);
-
-            // Step 2: Upload file to Google Drive via resumable URI
-            const uploadRes = await fetch(uploadUri, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": selectedFile.type,
-                },
-                body: selectedFile,
-            });
-
-            if (!uploadRes.ok) {
-                const errorBody = await uploadRes.text().catch(() => "No response body");
-                throw new Error(`Upload ke Google Drive gagal: ${uploadRes.status} - ${errorBody}`);
-            }
-
-            const driveData = await uploadRes.json();
-            const gdriveFileId = driveData.id;
-            if (!gdriveFileId) {
-                throw new Error("Google Drive tidak mengembalikan ID file");
-            }
-
-            setProgress(70);
-            setStep("completing");
-
-            // Step 3: Calculate SHA-256
-            const sha256 = await computeSha256(selectedFile);
-            setProgress(85);
-
-            // Step 4: Complete — save metadata to DB
-            const completeRes = await fetch("/api/upload/complete", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    driveId,
-                    gdriveFileId,
-                    title: title.trim(),
-                    subject: subject.trim(),
-                    tags: tags.length > 0 ? JSON.stringify(tags) : null,
-                    abstract: abstract.trim() || null,
-                    year: year ? parseInt(year) : null,
-                    authors: authors.trim() || null,
-                    mimeType: selectedFile.type,
-                    sizeBytes: selectedFile.size,
-                    sha256,
-                    visibility,
-                }),
-            });
-
-            if (!completeRes.ok) {
-                const data = await completeRes.json();
-                throw new Error(data.error ?? "Gagal menyimpan metadata");
-            }
-
-            setProgress(100);
-            setStep("done");
-
-            // Redirect to browse after short delay
-            setTimeout(() => router.push("/"), 2000);
-        } catch (err) {
-            setStep("error");
-            setErrorMsg(err instanceof Error ? err.message : "Terjadi kesalahan saat upload");
-        }
+        await Promise.all(uploadTasks);
+        setStep("DONE");
     };
 
-    const isUploading = step === "uploading" || step === "completing";
-    const fileTypeLabel = selectedFile ? (FILE_TYPE_LABELS[selectedFile.type] ?? "FILE") : "";
+    const applyGlobalSettings = () => {
+        setFilesQueue(q => q.map(item => ({
+            ...item,
+            metadata: {
+                ...item.metadata,
+                subject: globalSubject || item.metadata.subject,
+                year: globalYear || item.metadata.year,
+                visibility: globalVisibility || item.metadata.visibility,
+            }
+        })));
+        setGlobalSubject("");
+        setGlobalYear("");
+    };
+
+    const setItemMetadata = (index: number, key: keyof FileItem["metadata"], value: any) => {
+        setFilesQueue(q => {
+            const newQ = [...q];
+            newQ[index].metadata = { ...newQ[index].metadata, [key]: value };
+            return newQ;
+        });
+    };
+
+    const setItemTagsStr = (index: number, tagsStr: string) => {
+        const tagsBox = tagsStr.split(",").map(t => t.trim()).filter(Boolean);
+        setItemMetadata(index, "tags", tagsBox);
+    };
+
+    const removeItem = (index: number) => {
+        setFilesQueue(q => {
+            const result = q.filter((_, i) => i !== index);
+            if (result.length === 0) setStep("SELECT");
+            return result;
+        });
+    };
 
     return (
         <div>
             <div className="flex items-center gap-2 text-xs text-on-surface/50 font-sans mb-2">
                 <span>ARSIP</span><span>›</span>
-                <span className="text-on-surface/70">UNGGAH DOKUMEN</span>
+                <span className="text-on-surface/70">BATCH UPLOAD</span>
             </div>
-            <h1 className="text-3xl font-display font-bold text-primary mb-2">Unggah Dokumen</h1>
+            <h1 className="text-3xl font-display font-bold text-primary mb-2">Unggah Dokumen (Batch)</h1>
             <p className="text-on-surface/60 text-sm mb-8 max-w-xl">
-                Kontribusikan ke arsip kolektif. Pastikan metadata yang diisi akurat untuk kemudahan pencarian.
+                Unggah banyak file sekaligus. Sistem otomatis menebak judul, mata kuliah, dan tahun berdasarkan pola penamaan judul (misal: [UJIAN 1] KUGU 2021.pdf).
             </p>
 
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-                {/* Left: File drop zone */}
-                <div className="lg:col-span-3">
-                    <div className="bg-surface-container-lowest rounded-md shadow-ambient p-8">
-                        {/* Hidden file input */}
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            className="hidden"
-                            accept={ALLOWED_MIME_TYPES.join(",")}
-                            onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) handleFileSelect(file);
-                            }}
-                        />
-
-                        {/* Drop zone */}
-                        <div
-                            onClick={() => fileInputRef.current?.click()}
-                            onDragOver={handleDragOver}
-                            onDragLeave={handleDragLeave}
-                            onDrop={handleDrop}
-                            className={`border-2 border-dashed rounded-md p-8 text-center transition-colors cursor-pointer ${dragOver
-                                ? "border-secondary bg-secondary/5"
-                                : selectedFile
-                                    ? "border-emerald-400/40 bg-emerald-50/30 dark:bg-emerald-900/10"
-                                    : "border-outline-variant/30 hover:border-secondary/40"
-                                }`}
-                        >
-                            {selectedFile ? (
-                                <>
-                                    <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                                        <FileCheckIcon className="w-6 h-6 text-emerald-600" />
-                                    </div>
-                                    <p className="text-sm font-medium text-on-surface mb-1">{selectedFile.name}</p>
-                                    <p className="text-xs text-on-surface/50 font-mono">
-                                        {fileTypeLabel} · {formatBytes(selectedFile.size)}
-                                    </p>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setSelectedFile(null);
-                                            if (fileInputRef.current) fileInputRef.current.value = "";
-                                        }}
-                                        className="mt-3 text-xs text-red-500 hover:text-red-600 underline"
-                                    >
-                                        Hapus file
-                                    </button>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-secondary/10 flex items-center justify-center">
-                                        <UploadCloudIcon className="w-6 h-6 text-secondary" />
-                                    </div>
-                                    <p className="text-sm text-on-surface/70 mb-1">
-                                        Seret dan lepas file di sini, atau klik untuk memilih
-                                    </p>
-                                    <p className="text-xs text-on-surface/40 font-mono">
-                                        Format: PDF, DOCX, XLSX, PPTX, TXT, PNG, JPG, ZIP
-                                    </p>
-                                </>
-                            )}
-                        </div>
-
-                        {!selectedFile && (
-                            <div className="mt-4 flex justify-center">
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    onClick={() => fileInputRef.current?.click()}
-                                >
-                                    Pilih File
-                                </Button>
-                            </div>
-                        )}
-
-                        {/* Upload progress */}
-                        {isUploading && (
-                            <div className="mt-6">
-                                <div className="flex items-center justify-between text-xs text-on-surface/60 mb-2">
-                                    <span>{step === "uploading" ? "Mengunggah ke Drive..." : "Menyimpan metadata..."}</span>
-                                    <span>{progress}%</span>
-                                </div>
-                                <div className="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-secondary rounded-full transition-all duration-300"
-                                        style={{ width: `${progress}%` }}
-                                    />
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Success message */}
-                        {step === "done" && (
-                            <div className="mt-6 px-4 py-3 rounded-md bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-sm">
-                                ✅ File berhasil diunggah! Mengalihkan ke halaman utama...
-                            </div>
-                        )}
+            {/* STEP 1: SELECT FILES */}
+            {step === "SELECT" && (
+                <div className="bg-surface-container-lowest rounded-md shadow-ambient p-8 text-center border-2 border-dashed border-outline-variant/30 hover:border-secondary/40 cursor-pointer"
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                >
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        className="hidden"
+                        multiple
+                        accept={ALLOWED_MIME_TYPES.join(",")}
+                        onChange={(e) => handleFilesSelect(e.target.files)}
+                    />
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-secondary/10 flex items-center justify-center">
+                        <UploadCloudIcon className="w-8 h-8 text-secondary" />
                     </div>
+                    <p className="text-lg font-medium text-on-surface mb-2">Seret dan lepas banyak file di sini</p>
+                    <p className="text-sm text-on-surface/60 mb-6">atau klik untuk memilih dari komputer Anda</p>
                 </div>
+            )}
 
-                {/* Right: Metadata form */}
-                <div className="lg:col-span-2">
-                    <div className="bg-surface-container-lowest rounded-md shadow-ambient p-6 space-y-5">
-                        <p className="text-xs text-on-surface/50 uppercase tracking-wider font-medium">Metadata Dokumen</p>
-
-                        <Input
-                            id="title"
-                            label="JUDUL"
-                            placeholder="Catatan Kimia Organik 2 — Pertemuan 5"
-                            required
-                            value={title}
-                            onChange={(e) => setTitle((e.target as HTMLInputElement).value)}
-                        />
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <Input
-                                id="subject"
-                                label="MATA KULIAH"
-                                placeholder="Kimia Organik"
-                                required
-                                value={subject}
-                                onChange={(e) => setSubject((e.target as HTMLInputElement).value)}
+            {/* STEP 2: REVIEW / PREVIEW */}
+            {step === "REVIEW" && (
+                <div className="space-y-6">
+                    <div className="flex flex-wrap justify-between items-center bg-surface-container-low p-4 rounded-md shadow-sm gap-4">
+                        <h3 className="font-semibold text-lg text-primary">Tinjau Metadata ({filesQueue.length} file)</h3>
+                        <div className="flex items-center gap-3">
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                className="hidden"
+                                multiple
+                                accept={ALLOWED_MIME_TYPES.join(",")}
+                                onChange={(e) => handleFilesSelect(e.target.files)}
                             />
-                            <Input
-                                id="year"
-                                label="TAHUN"
-                                placeholder="2024"
-                                mono
-                                type="number"
-                                value={year}
-                                onChange={(e) => setYear((e.target as HTMLInputElement).value)}
+                            <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>Tambah File</Button>
+                            <Button onClick={startBatchUpload}>Mulai Upload</Button>
+                        </div>
+                    </div>
+
+                    <div className="bg-secondary/5 p-4 rounded-md border border-secondary/20 flex flex-wrap gap-4 items-end">
+                        <div className="flex-1 min-w-[200px]">
+                            <Input 
+                                id="global-sub" label="MATA KULIAH (Semua)" 
+                                value={globalSubject} onChange={e => setGlobalSubject(e.target.value)} 
                             />
                         </div>
+                        <div className="flex-1 min-w-[100px]">
+                            <Input 
+                                id="global-year" label="TAHUN (Semua)" 
+                                value={globalYear} onChange={e => setGlobalYear(e.target.value)} 
+                            />
+                        </div>
+                        <div className="flex-1 min-w-[100px]">
+                            <p className="text-xs text-on-surface/60 mb-2">VISIBILITAS (Semua)</p>
+                            <select 
+                                className="w-full bg-surface text-on-surface p-2 rounded border border-outline/30"
+                                value={globalVisibility} 
+                                onChange={e => setGlobalVisibility(e.target.value as any)}
+                            >
+                                <option value="members">Anggota</option>
+                                <option value="admin_only">Hanya Admin</option>
+                            </select>
+                        </div>
+                        <Button variant="secondary" onClick={applyGlobalSettings}>Terapkan</Button>
+                    </div>
 
-                        <Input
-                            id="authors"
-                            label="PENULIS"
-                            placeholder="Dipisahkan dengan koma"
-                            value={authors}
-                            onChange={(e) => setAuthors((e.target as HTMLInputElement).value)}
-                        />
-
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-medium text-on-surface/60 uppercase tracking-wide">TAGS</label>
-                            <div className="flex flex-wrap gap-1.5 mb-1.5">
-                                {tags.map((tag) => (
-                                    <Badge key={tag} variant="data" className="gap-1">
-                                        {tag}
-                                        <button
-                                            onClick={() => removeTag(tag)}
-                                            className="text-on-secondary-container/60 hover:text-on-secondary-container ml-0.5"
-                                        >
-                                            ×
+                    <div className="grid gap-4">
+                        {filesQueue.map((item, i) => (
+                            <div key={item.id} className="bg-surface-container-lowest p-5 rounded-md shadow-sm border border-outline-variant/30 flex flex-col md:flex-row gap-6">
+                                <div className="flex flex-col gap-2 md:w-1/3 border-r border-outline-variant/30 pr-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2 overflow-hidden" title={item.file.name}>
+                                            <FileIcon className="w-5 h-5 text-secondary shrink-0" />
+                                            <span className="font-medium text-sm truncate block">{item.file.name}</span>
+                                        </div>
+                                        <button onClick={() => removeItem(i)} className="text-error/70 hover:text-error shrink-0">
+                                            <TrashIcon className="w-4 h-4" />
                                         </button>
-                                    </Badge>
-                                ))}
+                                    </div>
+                                    <div className="text-xs text-on-surface/50 font-mono">
+                                        {formatBytes(item.file.size)} • {FILE_TYPE_LABELS[item.file.type] || "FILE"}
+                                    </div>
+                                    <div className="mt-2 text-xs">
+                                        <label className="text-on-surface/60">Privasi:</label>
+                                        <select className="ml-2 bg-transparent text-primary outline-none" value={item.metadata.visibility} onChange={e => setItemMetadata(i, "visibility", e.target.value)}>
+                                            <option value="members">Semua Anggota</option>
+                                            <option value="admin_only">Hanya Admin</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="md:col-span-2">
+                                        <Input
+                                            id={`title-${i}`} label="JUDUL"
+                                            value={item.metadata.title} onChange={e => setItemMetadata(i, "title", e.target.value)}
+                                        />
+                                    </div>
+                                    <Input
+                                        id={`subject-${i}`} label="KODE / MATKUL"
+                                        value={item.metadata.subject} onChange={e => setItemMetadata(i, "subject", e.target.value)}
+                                    />
+                                    <Input
+                                        id={`year-${i}`} label="TAHUN"
+                                        value={item.metadata.year} onChange={e => setItemMetadata(i, "year", e.target.value)}
+                                    />
+                                    <div className="md:col-span-2 text-xs">
+                                        <p className="text-on-surface/60 mb-1">TAG (Pisahkan dengan koma)</p>
+                                        <input 
+                                            className="w-full bg-surface text-on-surface px-3 py-2 rounded border border-outline/30"
+                                            value={item.metadata.tags.join(", ")}
+                                            onChange={e => setItemTagsStr(i, e.target.value)} 
+                                        />
+                                    </div>
+                                </div>
                             </div>
-                            <div className="flex gap-2">
-                                <input
-                                    value={tagInput}
-                                    onChange={(e) => setTagInput(e.target.value)}
-                                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
-                                    placeholder="Tambah tag..."
-                                    className="flex-1 px-3 py-2 rounded-md bg-surface-container-low text-sm text-on-surface placeholder:text-on-surface/40 focus:outline-none ghost-border focus:ghost-border-focus"
-                                />
-                                <Button variant="secondary" size="sm" onClick={addTag}>+ Tag</Button>
-                            </div>
-                        </div>
-
-                        <Textarea
-                            id="abstract"
-                            label="ABSTRAK"
-                            placeholder="Gambaran singkat isi dokumen..."
-                            rows={3}
-                            value={abstract}
-                            onChange={(e) => setAbstract((e.target as HTMLTextAreaElement).value)}
-                        />
-
-                        <div>
-                            <label className="text-xs font-medium text-on-surface/60 uppercase tracking-wide mb-2 block">VISIBILITAS</label>
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => setVisibility("members")}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${visibility === "members"
-                                        ? "bg-secondary text-on-secondary"
-                                        : "bg-surface-container-high text-on-surface/60 hover:text-on-surface"
-                                        }`}
-                                >
-                                    Publik
-                                </button>
-                                <button
-                                    onClick={() => setVisibility("admin_only")}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${visibility === "admin_only"
-                                        ? "bg-secondary text-on-secondary"
-                                        : "bg-surface-container-high text-on-surface/60 hover:text-on-surface"
-                                        }`}
-                                >
-                                    Admin Only
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Error message */}
-                        {errorMsg && (
-                            <div className="px-4 py-3 rounded-md bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-sm">
-                                {errorMsg}
-                            </div>
-                        )}
-
-                        <Button
-                            variant="primary"
-                            className="w-full mt-4"
-                            onClick={handleUpload}
-                            disabled={!selectedFile || !title.trim() || !subject.trim() || isUploading || step === "done"}
-                        >
-                            {isUploading ? "Mengunggah..." : step === "done" ? "Berhasil ✓" : "Unggah ke Arsip ✓"}
-                        </Button>
+                        ))}
                     </div>
                 </div>
-            </div>
+            )}
+
+            {/* STEP 3 & 4: UPLOAD / DONE */}
+            {(step === "UPLOAD" || step === "DONE") && (
+                <div className="space-y-6 max-w-4xl mx-auto mt-6">
+                    <div className="bg-surface-container-lowest p-6 rounded-md shadow-ambient text-center">
+                        <h2 className="text-xl font-semibold mb-2">
+                            {step === "DONE" ? "Upload Selesai!" : "Sedang Mengunggah..."}
+                        </h2>
+                        <div className="w-full bg-surface-container-high rounded-full h-3 mb-2 overflow-hidden">
+                            <div 
+                                className={`bg-secondary h-3 transition-all duration-300`} 
+                                style={{ width: `${overallProgress}%` }}
+                            />
+                        </div>
+                        <p className="text-sm text-on-surface/60">{overallProgress}% Selesai</p>
+                        
+                        {step === "DONE" && (
+                            <Button className="mt-6" onClick={() => router.push("/")}>Kembali ke Arsip</Button>
+                        )}
+                    </div>
+
+                    <div className="grid gap-3">
+                        {filesQueue.map((item) => (
+                            <div key={item.id} className="bg-surface-container-lowest p-4 rounded-md shadow-sm border border-outline-variant/30 flex items-center justify-between">
+                                <div className="flex items-center gap-3 w-1/2 overflow-hidden">
+                                    {item.status === "done" ? <FileCheckIcon className="w-5 h-5 text-emerald-500 shrink-0" /> :
+                                     item.status === "error" ? <AlertCircleIcon className="w-5 h-5 text-error shrink-0" /> :
+                                     <UploadCloudIcon className="w-5 h-5 text-secondary animate-pulse shrink-0" />}
+                                    <span className="font-medium text-sm truncate block">{item.metadata.title}</span>
+                                </div>
+                                <div className="w-1/3 text-right">
+                                    {item.status === "error" ? (
+                                        <span className="text-xs text-error truncate" title={item.error}>{item.error}</span>
+                                    ) : item.status === "done" ? (
+                                        <span className="text-xs font-bold text-emerald-500">Berhasil</span>
+                                    ) : (
+                                        <div className="w-full bg-surface-container-high rounded-full h-1.5 inline-block">
+                                            <div 
+                                                className={`h-1.5 rounded-full transition-all duration-300 bg-secondary`} 
+                                                style={{ width: `${item.progress}%` }}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
 
-function UploadCloudIcon({ className }: { className?: string }) {
-    return (
-        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="16 16 12 12 8 16" /><line x1="12" y1="12" x2="12" y2="21" /><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
-        </svg>
-    );
-}
 
-function FileCheckIcon({ className }: { className?: string }) {
-    return (
-        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-            <polyline points="9 15 11 17 15 13" />
-        </svg>
-    );
-}

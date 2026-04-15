@@ -17,7 +17,8 @@ interface User {
 }
 
 export default function UsersPage() {
-    const { data: session } = useSession();
+    const sessionState = useSession();
+    const session = sessionState?.data;
     const [users, setUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isAddAdminModalOpen, setIsAddAdminModalOpen] = useState(false);
@@ -42,8 +43,9 @@ export default function UsersPage() {
         fetchUsers();
     }, []);
 
-    // Also checking for 'SUPERADMIN' just in case the role casing is uppercase
-    const isSuperadmin = session?.user?.role === "superadmin" || session?.user?.role === "SUPERADMIN";
+    const sessionUser = session?.user as { role?: string } | undefined;
+    // Normalize role value so legacy uppercase values are treated consistently.
+    const isSuperadmin = sessionUser?.role?.toLowerCase() === "superadmin";
 
     return (
         <div>

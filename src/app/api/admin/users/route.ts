@@ -31,9 +31,10 @@ export async function POST(req: Request) {
     if (!session?.user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    
-    const userRole = (session.user as any).role;
-    const userStatus = (session.user as any).status;
+
+    const user = session.user as { role?: string; status?: string };
+    const userRole = user.role;
+    const userStatus = user.status;
 
     if (userStatus !== "active" || userRole !== "superadmin") {
         return NextResponse.json({ error: "Forbidden - Superadmin only" }, { status: 403 });
@@ -70,7 +71,8 @@ export async function POST(req: Request) {
             await db.insert(users).values(dummyUser);
             return NextResponse.json({ message: "Admin added", user: dummyUser });
         }
-    } catch (e: any) {
-        return NextResponse.json({ error: e.message || "Failed to add admin" }, { status: 500 });
+    } catch (e: unknown) {
+        const errorMessage = e instanceof Error ? e.message : "Failed to add admin";
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }

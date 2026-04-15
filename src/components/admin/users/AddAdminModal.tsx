@@ -39,8 +39,8 @@ export function AddAdminModal({ isOpen, onClose, onSuccess }: AddAdminModalProps
 
       setEmail('');
       onSuccess();
-    } catch (err: any) {
-      setError(err.message || 'Terjadi kesalahan');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan');
     } finally {
       setIsLoading(false);
     }

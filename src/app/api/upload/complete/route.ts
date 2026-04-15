@@ -25,6 +25,8 @@ export async function POST(req: NextRequest) {
     const {
         driveId,
         gdriveFileId,
+        fileName,
+        uploadStartedAt,
         title,
         subject,
         docType,
@@ -39,7 +41,9 @@ export async function POST(req: NextRequest) {
         visibility,
     } = body as {
         driveId: string;
-        gdriveFileId: string;
+        gdriveFileId?: string | null;
+        fileName?: string;
+        uploadStartedAt?: number;
         title: string;
         subject: string;
         docType: string;
@@ -54,7 +58,7 @@ export async function POST(req: NextRequest) {
         visibility?: string;
     };
 
-    if (!driveId || !gdriveFileId || !title || !subject || !docType || !mimeType || !sha256) {
+    if (!driveId || !title || !subject || !docType || !mimeType || !sha256) {
         return NextResponse.json(
             { error: "Field wajib belum lengkap" },
             { status: 400 }
@@ -79,11 +83,35 @@ export async function POST(req: NextRequest) {
         );
     }
 
-    // Verify file exists on Drive
     const adapter = getDriveAdapter();
+    let resolvedGdriveFileId = gdriveFileId ?? null;
+
+    if (!resolvedGdriveFileId) {
+        const uploadedAfterMs =
+            typeof uploadStartedAt === "number" ? Math.max(uploadStartedAt - 60_000, 0) : undefined;
+
+        resolvedGdriveFileId = await adapter.findRecentFileIdByNameAndSize(
+            driveId as "A" | "B",
+            fileName ?? title,
+            sizeBytes,
+            uploadedAfterMs
+        );
+    }
+
+    if (!resolvedGdriveFileId) {
+        return NextResponse.json(
+            {
+                error:
+                    "Upload ke Google Drive selesai, tapi ID file tidak terbaca. Silakan coba unggah ulang file ini.",
+            },
+            { status: 502 }
+        );
+    }
+
+    // Verify file exists on Drive
     const driveFile = await adapter.getFile(
         driveId as "A" | "B",
-        gdriveFileId
+        resolvedGdriveFileId
     );
 
     if (!driveFile) {
@@ -146,7 +174,7 @@ export async function POST(req: NextRequest) {
             sizeBytes,
             sha256,
             driveId,
-            gdriveFileId,
+            gdriveFileId: resolvedGdriveFileId,
             visibility: visibility ?? "members",
             uploaderId: user.id ?? "",
             createdAt: now,
@@ -167,7 +195,7 @@ export async function POST(req: NextRequest) {
     } catch (err) {
         // Per rules.md §6.2: if DB write fails, delete the Drive file
         console.error("[UploadComplete] DB write failed, deleting Drive file:", err);
-        await adapter.deleteFile(driveId as "A" | "B", gdriveFileId);
+        await adapter.deleteFile(driveId as "A" | "B", resolvedGdriveFileId);
         return NextResponse.json(
             { error: "Gagal menyimpan metadata. File telah dihapus dari Drive." },
             { status: 500 }

@@ -146,6 +146,56 @@ export class GoogleDriveAdapter {
     }
 
     /**
+     * Resolve a recently uploaded file ID when resumable upload responses do not
+     * include metadata JSON in the browser response body.
+     */
+    async findRecentFileIdByNameAndSize(
+        driveId: DriveAccountId,
+        fileName: string,
+        sizeBytes: number,
+        uploadedAfterMs?: number
+    ): Promise<string | null> {
+        try {
+            const drive = this.getDriveClient(driveId);
+            const { folderId } = this.getCredentials(driveId);
+            const escapedName = fileName.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+
+            const queryParts = [
+                `trashed = false`,
+                `'${folderId}' in parents`,
+                `name = '${escapedName}'`,
+            ];
+
+            if (uploadedAfterMs) {
+                const iso = new Date(uploadedAfterMs).toISOString();
+                queryParts.push(`createdTime > '${iso}'`);
+            }
+
+            const response = await drive.files.list({
+                q: queryParts.join(" and "),
+                fields: "files(id,name,size,createdTime)",
+                orderBy: "createdTime desc",
+                pageSize: 20,
+                supportsAllDrives: true,
+                includeItemsFromAllDrives: true,
+            });
+
+            const candidates = response.data.files ?? [];
+            const matched = candidates.find(
+                (file) => parseInt(file.size ?? "0", 10) === sizeBytes
+            );
+
+            return matched?.id ?? null;
+        } catch (err) {
+            console.error(
+                `[DriveAdapter] Failed to resolve uploaded file by name/size on Drive ${driveId}:`,
+                err
+            );
+            return null;
+        }
+    }
+
+    /**
      * Delete a file from Drive.
      * Per rules.md §6.2: delete from Drive first, then DB.
      * If Drive delete fails, do NOT delete from DB.

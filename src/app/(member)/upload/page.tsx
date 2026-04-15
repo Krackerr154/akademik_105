@@ -159,6 +159,19 @@ export default function BatchUploadPage() {
         return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
     };
 
+    const parseJsonResponse = async <T,>(res: Response): Promise<T | null> => {
+        const raw = await res.text();
+        if (!raw || raw.trim().length === 0) {
+            return null;
+        }
+
+        try {
+            return JSON.parse(raw) as T;
+        } catch {
+            throw new Error(`Respons tidak valid dari server (${res.status}).`);
+        }
+    };
+
     // Upload Execution
     const startBatchUpload = async () => {
         setStep("UPLOAD");
@@ -180,6 +193,7 @@ export default function BatchUploadPage() {
             try {
                 updateItemStatus({ status: "uploading", progress: 10 });
                 const { file, metadata } = item;
+                const uploadStartedAt = Date.now();
 
                 // Step 1: Init
                 const initRes = await fetch("/api/upload/init", {
@@ -192,12 +206,24 @@ export default function BatchUploadPage() {
                     }),
                 });
 
+                const initData = await parseJsonResponse<{
+                    driveId?: string;
+                    uploadUri?: string;
+                    error?: string;
+                }>(initRes);
+
                 if (!initRes.ok) {
-                    const data = await initRes.json();
-                    throw new Error(data.error ?? "Gagal menginisialisasi upload");
+                    throw new Error(
+                        initData?.error ??
+                            `Gagal menginisialisasi upload (${initRes.status})`
+                    );
                 }
 
-                const { driveId, uploadUri } = await initRes.json();
+                if (!initData?.driveId || !initData.uploadUri) {
+                    throw new Error("Respons inisialisasi upload tidak lengkap");
+                }
+
+                const { driveId, uploadUri } = initData;
                 updateItemStatus({ progress: 20 });
 
                 // Step 2: Upload to Drive
@@ -211,9 +237,13 @@ export default function BatchUploadPage() {
                     throw new Error(`Upload gagal: ${uploadRes.status}`);
                 }
 
-                const driveData = await uploadRes.json();
-                const gdriveFileId = driveData.id;
-                if (!gdriveFileId) throw new Error("Google Drive tidak mengembalikan ID file");
+                const driveData = await parseJsonResponse<{
+                    id?: string;
+                }>(uploadRes);
+                const gdriveFileId =
+                    driveData && typeof driveData.id === "string"
+                        ? driveData.id
+                        : null;
 
                 updateItemStatus({ progress: 70 });
 
@@ -228,6 +258,8 @@ export default function BatchUploadPage() {
                     body: JSON.stringify({
                         driveId,
                         gdriveFileId,
+                        fileName: file.name,
+                        uploadStartedAt,
                         title: metadata.title.trim(),
                         subject: metadata.subject.trim(),
                         docType: normalizeDocumentTypeCode(metadata.docType || "OTHER"),
@@ -241,9 +273,15 @@ export default function BatchUploadPage() {
                     }),
                 });
 
+                const completeData = await parseJsonResponse<{
+                    error?: string;
+                }>(completeRes);
+
                 if (!completeRes.ok) {
-                    const data = await completeRes.json();
-                    throw new Error(data.error ?? "Gagal menyimpan metadata");
+                    throw new Error(
+                        completeData?.error ??
+                            `Gagal menyimpan metadata (${completeRes.status})`
+                    );
                 }
 
                 updateItemStatus({ status: "done", progress: 100 });

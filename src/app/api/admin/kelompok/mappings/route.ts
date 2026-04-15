@@ -40,12 +40,17 @@ export async function GET() {
 
     const mappedKeys = new Set(mappings.map((m) => m.subjectKey));
     const seen = new Set<string>();
+    const countBySubjectKey = new Map<string, number>();
     const unmappedSubjects: Array<{ subjectKey: string; subjectLabel: string }> = [];
 
     for (const row of subjectsRaw) {
         const label = String(row.subject ?? "").trim();
         const key = normalizeSubjectKey(label);
-        if (!key || seen.has(key)) continue;
+        if (!key) continue;
+
+        countBySubjectKey.set(key, (countBySubjectKey.get(key) ?? 0) + 1);
+
+        if (seen.has(key)) continue;
 
         seen.add(key);
         if (!mappedKeys.has(key)) {
@@ -53,7 +58,12 @@ export async function GET() {
         }
     }
 
-    return NextResponse.json({ cards, mappings, unmappedSubjects });
+    const mappingsWithStats = mappings.map((row) => ({
+        ...row,
+        fileCount: countBySubjectKey.get(row.subjectKey) ?? 0,
+    }));
+
+    return NextResponse.json({ cards, mappings: mappingsWithStats, unmappedSubjects });
 }
 
 /** POST /api/admin/kelompok/mappings */

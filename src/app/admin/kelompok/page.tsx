@@ -50,6 +50,7 @@ type SubjectMapping = {
     subjectKey: string;
     subjectLabel: string;
     kelompokCode: string;
+    fileCount: number;
 };
 
 type UnmappedSubject = {
@@ -165,6 +166,7 @@ export default function AdminKelompokPage() {
                       subjectKey: String(row.subjectKey),
                       subjectLabel: String(row.subjectLabel),
                       kelompokCode: String(row.kelompokCode),
+                                            fileCount: Number(row.fileCount ?? 0),
                   }))
                 : [];
 
@@ -234,6 +236,62 @@ export default function AdminKelompokPage() {
             );
         });
     }, [mappings, mappingQuery]);
+
+    const groupedMappings = useMemo(() => {
+        const cardOrder = new Map<string, number>();
+        for (let i = 0; i < sortedCards.length; i += 1) {
+            cardOrder.set(sortedCards[i].code, i);
+        }
+
+        const groups = new Map<
+            string,
+            {
+                kelompokCode: string;
+                kelompokName: string;
+                isActive: boolean;
+                items: SubjectMapping[];
+            }
+        >();
+
+        for (const card of sortedCards) {
+            groups.set(card.code, {
+                kelompokCode: card.code,
+                kelompokName: card.name,
+                isActive: card.isActive,
+                items: [],
+            });
+        }
+
+        for (const row of filteredMappings) {
+            const group = groups.get(row.kelompokCode);
+            if (group) {
+                group.items.push(row);
+                continue;
+            }
+
+            groups.set(row.kelompokCode, {
+                kelompokCode: row.kelompokCode,
+                kelompokName: row.kelompokCode,
+                isActive: true,
+                items: [row],
+            });
+        }
+
+        return Array.from(groups.values())
+            .filter((group) => (mappingQuery.trim() ? group.items.length > 0 : true))
+            .map((group) => ({
+                ...group,
+                items: [...group.items].sort((a, b) =>
+                    a.subjectLabel.localeCompare(b.subjectLabel)
+                ),
+            }))
+            .sort((a, b) => {
+                const orderA = cardOrder.get(a.kelompokCode) ?? Number.MAX_SAFE_INTEGER;
+                const orderB = cardOrder.get(b.kelompokCode) ?? Number.MAX_SAFE_INTEGER;
+                if (orderA !== orderB) return orderA - orderB;
+                return a.kelompokName.localeCompare(b.kelompokName);
+            });
+    }, [filteredMappings, mappingQuery, sortedCards]);
 
     const activeCardsCount = sortedCards.filter((row) => row.isActive).length;
 
@@ -539,14 +597,14 @@ export default function AdminKelompokPage() {
                         id="tab-cards"
                         selected={activeTab === "cards"}
                         onClick={() => handleTabChange("cards")}
-                        label="Cards"
+                        label="Kelompok"
                         count={sortedCards.length}
                     />
                     <TabButton
                         id="tab-mappings"
                         selected={activeTab === "mappings"}
                         onClick={() => handleTabChange("mappings")}
-                        label="Mappings"
+                        label="Mata Kuliah"
                         count={mappings.length}
                     />
                 </div>
@@ -812,7 +870,7 @@ export default function AdminKelompokPage() {
                                 />
                             </Card>
 
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                                 {filteredMappings.length === 0 ? (
                                     <Card>
                                         <p className="text-sm text-on-surface/60">
@@ -820,17 +878,49 @@ export default function AdminKelompokPage() {
                                         </p>
                                     </Card>
                                 ) : (
-                                    filteredMappings.map((row) => (
-                                        <MappingRowEditor
-                                            key={row.id}
-                                            initial={row}
-                                            busy={busyId === row.id}
-                                            cardOptions={cardOptions}
-                                            onSave={handleSaveMapping}
-                                            onRequestDelete={(target) =>
-                                                setPendingDeleteMapping(target)
-                                            }
-                                        />
+                                    groupedMappings.map((group) => (
+                                        <Card key={group.kelompokCode} className="space-y-3">
+                                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <p className="text-sm font-display font-semibold text-primary">
+                                                        {group.kelompokName}
+                                                    </p>
+                                                    <Badge
+                                                        variant={
+                                                            group.isActive
+                                                                ? "flag-green"
+                                                                : "flag-yellow"
+                                                        }
+                                                    >
+                                                        {group.kelompokCode}
+                                                    </Badge>
+                                                </div>
+                                                <p className="text-xs text-on-surface/55">
+                                                    {group.items.length} mata kuliah
+                                                </p>
+                                            </div>
+
+                                            {group.items.length === 0 ? (
+                                                <p className="text-sm text-on-surface/55">
+                                                    Belum ada mata kuliah di kelompok ini.
+                                                </p>
+                                            ) : (
+                                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                                                    {group.items.map((row) => (
+                                                        <MappingCardEditor
+                                                            key={row.id}
+                                                            initial={row}
+                                                            busy={busyId === row.id}
+                                                            cardOptions={cardOptions}
+                                                            onSave={handleSaveMapping}
+                                                            onRequestDelete={(target) =>
+                                                                setPendingDeleteMapping(target)
+                                                            }
+                                                        />
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </Card>
                                     ))
                                 )}
                             </div>
@@ -1179,7 +1269,7 @@ function CardPreview({ draft }: { draft: AdminKelompokCard }) {
     );
 }
 
-function MappingRowEditor({
+function MappingCardEditor({
     initial,
     busy,
     cardOptions,
@@ -1221,39 +1311,40 @@ function MappingRowEditor({
             ...draft,
             subjectLabel,
             subjectKey: resolvedSubjectKey,
+            fileCount: draft.fileCount,
         });
     };
 
     return (
-        <Card className="bg-surface-container-low p-4 space-y-3">
+        <Card className="bg-surface-container-lowest p-4 space-y-3 ghost-border">
             <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant="data">{draft.kelompokCode}</Badge>
                     <span className="text-xs text-on-surface/50 font-mono">
                         {resolvedSubjectKey || "SUBJECT_KEY"}
                     </span>
                 </div>
+                <Badge variant="data">{draft.fileCount} file</Badge>
                 {busy && (
                     <span className="text-xs text-on-surface/50">Menyimpan perubahan...</span>
                 )}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] gap-3 items-end">
-                <Input
-                    id={`subject-${draft.id}`}
-                    label="MATA KULIAH"
-                    value={draft.subjectLabel}
-                    error={errors.subjectLabel}
-                    disabled={busy}
-                    onChange={(e) => {
-                        setErrors({});
-                        setDraft((prev) => ({
-                            ...prev,
-                            subjectLabel: e.target.value,
-                        }));
-                    }}
-                />
+            <Input
+                id={`subject-${draft.id}`}
+                label="MATA KULIAH"
+                value={draft.subjectLabel}
+                error={errors.subjectLabel}
+                disabled={busy}
+                onChange={(e) => {
+                    setErrors({});
+                    setDraft((prev) => ({
+                        ...prev,
+                        subjectLabel: e.target.value,
+                    }));
+                }}
+            />
 
+            <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto] gap-3 items-end">
                 <Select
                     id={`kelompok-${draft.id}`}
                     label="KELOMPOK"
@@ -1268,7 +1359,7 @@ function MappingRowEditor({
                     options={cardOptions}
                 />
 
-                <div className="flex gap-2 w-full lg:w-auto">
+                <div className="flex gap-2 w-full md:w-auto">
                     <Button className="flex-1" disabled={busy} onClick={handleSave}>
                         Simpan
                     </Button>

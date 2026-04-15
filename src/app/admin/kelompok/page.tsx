@@ -91,12 +91,14 @@ export default function AdminKelompokPage() {
     const [newCardPhotoUrl, setNewCardPhotoUrl] = useState("");
     const [newCardStyle, setNewCardStyle] = useState<"rect" | "drive">("rect");
     const [createCardErrors, setCreateCardErrors] = useState<CardFormErrors>({});
+    const [isCreateCardModalOpen, setIsCreateCardModalOpen] = useState(false);
 
     const [newSubjectLabel, setNewSubjectLabel] = useState("");
     const [newMappingKelompokCode, setNewMappingKelompokCode] = useState("");
     const [mappingQuery, setMappingQuery] = useState("");
     const [createMappingErrors, setCreateMappingErrors] =
         useState<MappingFormErrors>({});
+    const [isCreateMappingModalOpen, setIsCreateMappingModalOpen] = useState(false);
     const [pendingDeleteMapping, setPendingDeleteMapping] =
         useState<SubjectMapping | null>(null);
 
@@ -300,6 +302,54 @@ export default function AdminKelompokPage() {
         updateTabInUrl(nextTab);
     };
 
+    const resetCreateCardForm = useCallback(() => {
+        setNewCardCode("");
+        setNewCardName("");
+        setNewCardDescription("");
+        setNewCardPhotoUrl("");
+        setNewCardStyle("rect");
+        setCreateCardErrors({});
+    }, []);
+
+    const openCreateCardModal = useCallback(() => {
+        resetCreateCardForm();
+        setStatusMessage(null);
+        setIsCreateCardModalOpen(true);
+    }, [resetCreateCardForm]);
+
+    const closeCreateCardModal = useCallback(() => {
+        if (busyId === "new-card") return;
+        setIsCreateCardModalOpen(false);
+    }, [busyId]);
+
+    const resetCreateMappingForm = useCallback(() => {
+        setNewSubjectLabel("");
+        setCreateMappingErrors({});
+    }, []);
+
+    const openCreateMappingModal = useCallback(
+        (prefilledSubjectLabel?: string) => {
+            resetCreateMappingForm();
+            if (prefilledSubjectLabel) {
+                setNewSubjectLabel(prefilledSubjectLabel);
+            }
+            setNewMappingKelompokCode((prev) => {
+                if (prev && sortedCards.some((card) => card.code === prev)) {
+                    return prev;
+                }
+                return sortedCards[0]?.code ?? "";
+            });
+            setStatusMessage(null);
+            setIsCreateMappingModalOpen(true);
+        },
+        [resetCreateMappingForm, sortedCards]
+    );
+
+    const closeCreateMappingModal = useCallback(() => {
+        if (busyId === "new-mapping") return;
+        setIsCreateMappingModalOpen(false);
+    }, [busyId]);
+
     const handleCreateCard = async () => {
         const normalizedCode = normalizeKelompokCode(newCardCode || newCardName);
         const name = newCardName.trim();
@@ -353,6 +403,7 @@ export default function AdminKelompokPage() {
             setNewCardPhotoUrl("");
             setNewCardStyle("rect");
             setCreateCardErrors({});
+            setIsCreateCardModalOpen(false);
             setStatusMessage({
                 type: "success",
                 text: "Kartu kelompok berhasil ditambahkan.",
@@ -454,6 +505,7 @@ export default function AdminKelompokPage() {
 
             setNewSubjectLabel("");
             setCreateMappingErrors({});
+            setIsCreateMappingModalOpen(false);
             setStatusMessage({
                 type: "success",
                 text: "Mapping mata kuliah berhasil ditambahkan.",
@@ -630,132 +682,37 @@ export default function AdminKelompokPage() {
                             aria-labelledby="tab-cards"
                             className="space-y-5"
                         >
-                            <div className="grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-6 items-start">
-                                <Card className="space-y-4 lg:sticky lg:top-6">
-                                    <div className="space-y-1">
-                                        <h2 className="text-lg font-display font-semibold text-primary">
-                                            Tambah Kartu Kelompok
-                                        </h2>
-                                        <p className="text-xs text-on-surface/55">
-                                            Buat kategori baru untuk dashboard anggota.
-                                        </p>
-                                    </div>
-
-                                    <Input
-                                        id="new-card-code"
-                                        label="KODE"
-                                        placeholder="Contoh: KIMIA_POLIMER"
-                                        value={newCardCode}
-                                        error={createCardErrors.code}
-                                        disabled={busyId === "new-card"}
-                                        onChange={(e) => {
-                                            setCreateCardErrors((prev) => ({
-                                                ...prev,
-                                                code: undefined,
-                                            }));
-                                            setNewCardCode(e.target.value);
-                                        }}
-                                    />
-                                    <Input
-                                        id="new-card-name"
-                                        label="NAMA"
-                                        placeholder="Contoh: Kimia Polimer"
-                                        value={newCardName}
-                                        error={createCardErrors.name}
-                                        disabled={busyId === "new-card"}
-                                        onChange={(e) => {
-                                            setCreateCardErrors((prev) => ({
-                                                ...prev,
-                                                name: undefined,
-                                            }));
-                                            setNewCardName(e.target.value);
-                                        }}
-                                    />
-                                    <Textarea
-                                        id="new-card-description"
-                                        label="DESKRIPSI"
-                                        placeholder="Deskripsi singkat kartu"
-                                        value={newCardDescription}
-                                        error={createCardErrors.description}
-                                        disabled={busyId === "new-card"}
-                                        onChange={(e) => {
-                                            setCreateCardErrors((prev) => ({
-                                                ...prev,
-                                                description: undefined,
-                                            }));
-                                            setNewCardDescription(e.target.value);
-                                        }}
-                                    />
-                                    <Input
-                                        id="new-card-photo-url"
-                                        label="PHOTO URL"
-                                        placeholder="https://..."
-                                        value={newCardPhotoUrl}
-                                        error={createCardErrors.photoUrl}
-                                        disabled={busyId === "new-card"}
-                                        onChange={(e) => {
-                                            setCreateCardErrors((prev) => ({
-                                                ...prev,
-                                                photoUrl: undefined,
-                                            }));
-                                            setNewCardPhotoUrl(e.target.value);
-                                        }}
-                                    />
-                                    <Select
-                                        id="new-card-style"
-                                        label="GAYA KARTU"
-                                        value={newCardStyle}
-                                        disabled={busyId === "new-card"}
-                                        onChange={(e) =>
-                                            setNewCardStyle(
-                                                (e.target as HTMLSelectElement)
-                                                    .value as "rect" | "drive"
-                                            )
-                                        }
-                                        options={[
-                                            { value: "rect", label: "Rectangular" },
-                                            { value: "drive", label: "Drive-like" },
-                                        ]}
-                                    />
-
-                                    <Button
-                                        className="w-full"
-                                        onClick={handleCreateCard}
-                                        disabled={busyId === "new-card"}
-                                    >
-                                        {busyId === "new-card"
-                                            ? "Menyimpan..."
-                                            : "Tambah Kartu"}
-                                    </Button>
-                                </Card>
-
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between gap-3 flex-wrap">
-                                        <h2 className="text-lg font-display font-semibold text-primary">
-                                            Daftar Kartu
-                                        </h2>
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between gap-3 flex-wrap">
+                                    <h2 className="text-lg font-display font-semibold text-primary">
+                                        Daftar Kartu
+                                    </h2>
+                                    <div className="flex items-center gap-2 flex-wrap">
                                         <p className="text-xs text-on-surface/55">
                                             {activeCardsCount} aktif dari {sortedCards.length} kartu
                                         </p>
+                                        <Button size="sm" onClick={openCreateCardModal}>
+                                            + Tambah Kartu
+                                        </Button>
                                     </div>
-
-                                    {sortedCards.length === 0 ? (
-                                        <Card>
-                                            <p className="text-sm text-on-surface/60">
-                                                Belum ada kartu kelompok.
-                                            </p>
-                                        </Card>
-                                    ) : (
-                                        sortedCards.map((card) => (
-                                            <KelompokCardEditor
-                                                key={card.id}
-                                                initial={card}
-                                                busy={busyId === card.id}
-                                                onSave={handleSaveCard}
-                                            />
-                                        ))
-                                    )}
                                 </div>
+
+                                {sortedCards.length === 0 ? (
+                                    <Card>
+                                        <p className="text-sm text-on-surface/60">
+                                            Belum ada kartu kelompok.
+                                        </p>
+                                    </Card>
+                                ) : (
+                                    sortedCards.map((card) => (
+                                        <KelompokCardEditor
+                                            key={card.id}
+                                            initial={card}
+                                            busy={busyId === card.id}
+                                            onSave={handleSaveCard}
+                                        />
+                                    ))
+                                )}
                             </div>
                         </section>
                     )}
@@ -778,9 +735,18 @@ export default function AdminKelompokPage() {
                                             tetap rapi.
                                         </p>
                                     </div>
-                                    <p className="text-xs text-on-surface/55">
-                                        {mappings.length} mapping tersimpan
-                                    </p>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <p className="text-xs text-on-surface/55">
+                                            {mappings.length} mapping tersimpan
+                                        </p>
+                                        <Button
+                                            size="sm"
+                                            onClick={() => openCreateMappingModal()}
+                                            disabled={cardOptions.length === 0}
+                                        >
+                                            + Tambah Mata Kuliah
+                                        </Button>
+                                    </div>
                                 </div>
 
                                 {unmappedSubjects.length > 0 && (
@@ -795,11 +761,9 @@ export default function AdminKelompokPage() {
                                                     type="button"
                                                     className="px-2 py-1 rounded-md text-xs bg-surface-container-lowest text-on-surface/80 hover:bg-surface-container-high transition-colors"
                                                     onClick={() => {
-                                                        setCreateMappingErrors((prev) => ({
-                                                            ...prev,
-                                                            subjectLabel: undefined,
-                                                        }));
-                                                        setNewSubjectLabel(row.subjectLabel);
+                                                        openCreateMappingModal(
+                                                            row.subjectLabel
+                                                        );
                                                     }}
                                                 >
                                                     {row.subjectLabel}
@@ -808,58 +772,6 @@ export default function AdminKelompokPage() {
                                         </div>
                                     </div>
                                 )}
-
-                                <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] gap-3 items-end">
-                                    <Input
-                                        id="new-subject-label"
-                                        label="MATA KULIAH"
-                                        placeholder="Contoh: KIXX2X Kimia Analitik"
-                                        value={newSubjectLabel}
-                                        error={createMappingErrors.subjectLabel}
-                                        disabled={busyId === "new-mapping"}
-                                        onChange={(e) => {
-                                            setCreateMappingErrors((prev) => ({
-                                                ...prev,
-                                                subjectLabel: undefined,
-                                            }));
-                                            setNewSubjectLabel(e.target.value);
-                                        }}
-                                    />
-
-                                    <Select
-                                        id="new-mapping-kelompok"
-                                        label="KELOMPOK"
-                                        value={newMappingKelompokCode}
-                                        error={createMappingErrors.kelompokCode}
-                                        disabled={busyId === "new-mapping"}
-                                        onChange={(e) => {
-                                            setCreateMappingErrors((prev) => ({
-                                                ...prev,
-                                                kelompokCode: undefined,
-                                            }));
-                                            setNewMappingKelompokCode(
-                                                (e.target as HTMLSelectElement).value
-                                            );
-                                        }}
-                                        options={
-                                            cardOptions.length > 0
-                                                ? cardOptions
-                                                : [{ value: "", label: "Belum ada kartu" }]
-                                        }
-                                    />
-
-                                    <Button
-                                        className="w-full md:w-auto"
-                                        onClick={handleCreateMapping}
-                                        disabled={
-                                            busyId === "new-mapping" || cardOptions.length === 0
-                                        }
-                                    >
-                                        {busyId === "new-mapping"
-                                            ? "Menyimpan..."
-                                            : "Tambah"}
-                                    </Button>
-                                </div>
 
                                 <Input
                                     id="mapping-search"
@@ -879,7 +791,7 @@ export default function AdminKelompokPage() {
                                     </Card>
                                 ) : (
                                     groupedMappings.map((group) => (
-                                        <Card key={group.kelompokCode} className="space-y-3">
+                                        <Card key={group.kelompokCode} className="space-y-4">
                                             <div className="flex items-center justify-between gap-2 flex-wrap">
                                                 <div className="flex items-center gap-2 flex-wrap">
                                                     <p className="text-sm font-display font-semibold text-primary">
@@ -905,7 +817,7 @@ export default function AdminKelompokPage() {
                                                     Belum ada mata kuliah di kelompok ini.
                                                 </p>
                                             ) : (
-                                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                                                <div className="space-y-3">
                                                     {group.items.map((row) => (
                                                         <MappingCardEditor
                                                             key={row.id}
@@ -928,6 +840,170 @@ export default function AdminKelompokPage() {
                     )}
                 </>
             )}
+
+            <Modal
+                open={isCreateCardModalOpen}
+                onClose={closeCreateCardModal}
+                title="Tambah Kartu Kelompok"
+            >
+                <div className="space-y-3">
+                    <Input
+                        id="new-card-code"
+                        label="KODE"
+                        placeholder="Contoh: KIMIA_POLIMER"
+                        value={newCardCode}
+                        error={createCardErrors.code}
+                        disabled={busyId === "new-card"}
+                        onChange={(e) => {
+                            setCreateCardErrors((prev) => ({
+                                ...prev,
+                                code: undefined,
+                            }));
+                            setNewCardCode(e.target.value);
+                        }}
+                    />
+                    <Input
+                        id="new-card-name"
+                        label="NAMA"
+                        placeholder="Contoh: Kimia Polimer"
+                        value={newCardName}
+                        error={createCardErrors.name}
+                        disabled={busyId === "new-card"}
+                        onChange={(e) => {
+                            setCreateCardErrors((prev) => ({
+                                ...prev,
+                                name: undefined,
+                            }));
+                            setNewCardName(e.target.value);
+                        }}
+                    />
+                    <Textarea
+                        id="new-card-description"
+                        label="DESKRIPSI"
+                        placeholder="Deskripsi singkat kartu"
+                        value={newCardDescription}
+                        error={createCardErrors.description}
+                        disabled={busyId === "new-card"}
+                        onChange={(e) => {
+                            setCreateCardErrors((prev) => ({
+                                ...prev,
+                                description: undefined,
+                            }));
+                            setNewCardDescription(e.target.value);
+                        }}
+                    />
+                    <Input
+                        id="new-card-photo-url"
+                        label="PHOTO URL"
+                        placeholder="https://..."
+                        value={newCardPhotoUrl}
+                        error={createCardErrors.photoUrl}
+                        disabled={busyId === "new-card"}
+                        onChange={(e) => {
+                            setCreateCardErrors((prev) => ({
+                                ...prev,
+                                photoUrl: undefined,
+                            }));
+                            setNewCardPhotoUrl(e.target.value);
+                        }}
+                    />
+                    <Select
+                        id="new-card-style"
+                        label="GAYA KARTU"
+                        value={newCardStyle}
+                        disabled={busyId === "new-card"}
+                        onChange={(e) =>
+                            setNewCardStyle(
+                                (e.target as HTMLSelectElement).value as "rect" | "drive"
+                            )
+                        }
+                        options={[
+                            { value: "rect", label: "Rectangular" },
+                            { value: "drive", label: "Drive-like" },
+                        ]}
+                    />
+
+                    <div className="flex justify-end gap-2 pt-1">
+                        <Button
+                            variant="ghost"
+                            onClick={closeCreateCardModal}
+                            disabled={busyId === "new-card"}
+                        >
+                            Batal
+                        </Button>
+                        <Button
+                            onClick={handleCreateCard}
+                            disabled={busyId === "new-card"}
+                        >
+                            {busyId === "new-card" ? "Menyimpan..." : "Tambah Kartu"}
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal
+                open={isCreateMappingModalOpen}
+                onClose={closeCreateMappingModal}
+                title="Tambah Mata Kuliah"
+            >
+                <div className="space-y-3">
+                    <Input
+                        id="new-subject-label"
+                        label="MATA KULIAH"
+                        placeholder="Contoh: KIXX2X Kimia Analitik"
+                        value={newSubjectLabel}
+                        error={createMappingErrors.subjectLabel}
+                        disabled={busyId === "new-mapping"}
+                        onChange={(e) => {
+                            setCreateMappingErrors((prev) => ({
+                                ...prev,
+                                subjectLabel: undefined,
+                            }));
+                            setNewSubjectLabel(e.target.value);
+                        }}
+                    />
+
+                    <Select
+                        id="new-mapping-kelompok"
+                        label="KELOMPOK"
+                        value={newMappingKelompokCode}
+                        error={createMappingErrors.kelompokCode}
+                        disabled={busyId === "new-mapping"}
+                        onChange={(e) => {
+                            setCreateMappingErrors((prev) => ({
+                                ...prev,
+                                kelompokCode: undefined,
+                            }));
+                            setNewMappingKelompokCode(
+                                (e.target as HTMLSelectElement).value
+                            );
+                        }}
+                        options={
+                            cardOptions.length > 0
+                                ? cardOptions
+                                : [{ value: "", label: "Belum ada kartu" }]
+                        }
+                    />
+
+                    <div className="flex justify-end gap-2 pt-1">
+                        <Button
+                            variant="ghost"
+                            onClick={closeCreateMappingModal}
+                            disabled={busyId === "new-mapping"}
+                        >
+                            Batal
+                        </Button>
+                        <Button
+                            onClick={handleCreateMapping}
+                            disabled={
+                                busyId === "new-mapping" || cardOptions.length === 0
+                            }
+                        >
+                            {busyId === "new-mapping" ? "Menyimpan..." : "Tambah"}
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
 
             <Modal
                 open={Boolean(pendingDeleteMapping)}
@@ -1316,35 +1392,36 @@ function MappingCardEditor({
     };
 
     return (
-        <Card className="bg-surface-container-lowest p-4 space-y-3 ghost-border">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
+        <Card className="space-y-4 bg-surface-container-low">
+            <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="data">{draft.kelompokCode}</Badge>
+                    <Badge variant="subject">{draft.fileCount} file</Badge>
                     <span className="text-xs text-on-surface/50 font-mono">
                         {resolvedSubjectKey || "SUBJECT_KEY"}
                     </span>
                 </div>
-                <Badge variant="data">{draft.fileCount} file</Badge>
                 {busy && (
                     <span className="text-xs text-on-surface/50">Menyimpan perubahan...</span>
                 )}
             </div>
 
-            <Input
-                id={`subject-${draft.id}`}
-                label="MATA KULIAH"
-                value={draft.subjectLabel}
-                error={errors.subjectLabel}
-                disabled={busy}
-                onChange={(e) => {
-                    setErrors({});
-                    setDraft((prev) => ({
-                        ...prev,
-                        subjectLabel: e.target.value,
-                    }));
-                }}
-            />
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-3 items-start">
+                <Input
+                    id={`subject-${draft.id}`}
+                    label="MATA KULIAH"
+                    value={draft.subjectLabel}
+                    error={errors.subjectLabel}
+                    disabled={busy}
+                    onChange={(e) => {
+                        setErrors({});
+                        setDraft((prev) => ({
+                            ...prev,
+                            subjectLabel: e.target.value,
+                        }));
+                    }}
+                />
 
-            <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_auto] gap-3 items-end">
                 <Select
                     id={`kelompok-${draft.id}`}
                     label="KELOMPOK"
@@ -1358,20 +1435,20 @@ function MappingCardEditor({
                     }
                     options={cardOptions}
                 />
+            </div>
 
-                <div className="flex gap-2 w-full md:w-auto">
-                    <Button className="flex-1" disabled={busy} onClick={handleSave}>
-                        Simpan
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        className="text-red-700 hover:text-red-800"
-                        disabled={busy}
-                        onClick={() => onRequestDelete(draft)}
-                    >
-                        Hapus
-                    </Button>
-                </div>
+            <div className="flex justify-end gap-2">
+                <Button
+                    variant="ghost"
+                    className="text-red-700 hover:text-red-800"
+                    disabled={busy}
+                    onClick={() => onRequestDelete(draft)}
+                >
+                    Hapus
+                </Button>
+                <Button disabled={busy} onClick={handleSave}>
+                    {busy ? "Menyimpan..." : "Simpan"}
+                </Button>
             </div>
         </Card>
     );

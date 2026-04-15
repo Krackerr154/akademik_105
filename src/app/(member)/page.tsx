@@ -56,6 +56,8 @@ interface SubjectCardData extends SubjectMappingData {
     fileCount: number;
 }
 
+type ContentTab = "mata-kuliah" | "file";
+
 export default function BrowsePage() {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -72,6 +74,7 @@ export default function BrowsePage() {
     const [sort, setSort] = useState("newest");
     const [selectedKelompok, setSelectedKelompok] = useState("");
     const [selectedSubjectKey, setSelectedSubjectKey] = useState("");
+    const [contentTab, setContentTab] = useState<ContentTab>("mata-kuliah");
     const [filterDocType, setFilterDocType] = useState("");
     const [filterType, setFilterType] = useState("");
     const [page, setPage] = useState(1);
@@ -94,6 +97,20 @@ export default function BrowsePage() {
     useEffect(() => {
         setSelectedSubjectKey(subjectFromQuery);
     }, [subjectFromQuery]);
+
+    useEffect(() => {
+        if (!selectedKelompok) {
+            setContentTab("mata-kuliah");
+            return;
+        }
+
+        if (selectedSubjectKey) {
+            setContentTab("file");
+            return;
+        }
+
+        setContentTab("mata-kuliah");
+    }, [selectedKelompok, selectedSubjectKey]);
 
     const updateBrowseQuery = useCallback(
         (nextCategory: string, nextSubjectKey: string) => {
@@ -307,6 +324,21 @@ export default function BrowsePage() {
         (row) => row.subjectKey === selectedSubjectKey
     );
 
+    useEffect(() => {
+        if (!selectedKelompok || !selectedSubjectKey) return;
+        if (selectedSubjectCard) return;
+
+        setSelectedSubjectKey("");
+        setContentTab("mata-kuliah");
+        setPage(1);
+        updateBrowseQuery(selectedKelompok, "");
+    }, [
+        selectedKelompok,
+        selectedSubjectKey,
+        selectedSubjectCard,
+        updateBrowseQuery,
+    ]);
+
     const sorted = [...filesWithKelompok].sort((a, b) => {
         switch (sort) {
             case "oldest":
@@ -350,6 +382,7 @@ export default function BrowsePage() {
         const nextCode = selectedKelompok === code ? "" : code;
         setSelectedKelompok(nextCode);
         setSelectedSubjectKey("");
+        setContentTab("mata-kuliah");
         setPage(1);
         updateBrowseQuery(nextCode, "");
     };
@@ -361,6 +394,7 @@ export default function BrowsePage() {
         const nextKey = selectedSubjectKey === normalized ? "" : normalized;
 
         setSelectedSubjectKey(nextKey);
+        setContentTab("file");
         setPage(1);
         updateBrowseQuery(selectedKelompok, nextKey);
     };
@@ -368,6 +402,7 @@ export default function BrowsePage() {
     const clearSubjectSelection = () => {
         if (!selectedKelompok) return;
         setSelectedSubjectKey("");
+        setContentTab("mata-kuliah");
         setPage(1);
         updateBrowseQuery(selectedKelompok, "");
     };
@@ -512,7 +547,40 @@ export default function BrowsePage() {
                 )}
             </div>
 
+            {!selectedCard && (
+                <Card className="mb-6">
+                    <p className="text-sm text-on-surface/65">
+                        Pilih satu Kelompok untuk membuka tab browsing seperti drive.
+                    </p>
+                </Card>
+            )}
+
             {selectedCard && (
+                <div className="mb-6">
+                    <div
+                        role="tablist"
+                        aria-label="Drive browsing tabs"
+                        className="inline-flex items-center rounded-md bg-surface-container-low p-1"
+                    >
+                        <DriveTabButton
+                            label="Mata Kuliah"
+                            selected={contentTab === "mata-kuliah"}
+                            count={selectedKelompokSubjects.length}
+                            onClick={() => setContentTab("mata-kuliah")}
+                        />
+                        {selectedSubjectCard && (
+                            <DriveTabButton
+                                label="File"
+                                selected={contentTab === "file"}
+                                count={filtered.length}
+                                onClick={() => setContentTab("file")}
+                            />
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {selectedCard && contentTab === "mata-kuliah" && (
                 <div className="mb-6">
                     <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
                         <h2 className="text-base font-display font-semibold text-primary">
@@ -568,170 +636,173 @@ export default function BrowsePage() {
                 </div>
             )}
 
-            {selectedCard && (
-                <div className="mb-4 text-xs text-on-surface/60">
-                    Menampilkan: <span className="font-semibold text-primary">{selectedCard.name}</span>
-                    {selectedSubjectCard && (
-                        <>
-                            <span> › </span>
-                            <span className="font-semibold text-primary">
-                                {selectedSubjectCard.subjectLabel}
-                            </span>
-                        </>
-                    )}
-                </div>
-            )}
-
-            <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-                <div className="flex items-center gap-3">
-                    <Select
-                        options={[
-                            {
-                                value: "",
-                                label: selectedKelompok
-                                    ? "Semua Mata Kuliah"
-                                    : "Pilih Kelompok dulu",
-                            },
-                            ...selectedKelompokSubjects.map((s) => ({
-                                value: s.subjectKey,
-                                label: s.subjectLabel,
-                            })),
-                        ]}
-                        label="MATA KULIAH"
-                        value={selectedSubjectKey}
-                        disabled={!selectedKelompok}
-                        onChange={(e) => {
-                            const nextKey = normalizeSubjectKey(
-                                (e.target as HTMLSelectElement).value
-                            );
-                            if (!nextKey) {
-                                clearSubjectSelection();
-                                return;
-                            }
-                            handleSelectSubject(nextKey);
-                        }}
-                        className="w-56"
-                    />
-                    <Select
-                        options={[
-                            { value: "", label: "Semua Tipe Dokumen" },
-                            ...docTypeOptions
-                                .filter((opt) => opt.isActive !== false)
-                                .map((opt) => ({ value: opt.code, label: opt.label })),
-                        ]}
-                        label="TIPE DOKUMEN"
-                        value={filterDocType}
-                        onChange={(e) => {
-                            setFilterDocType((e.target as HTMLSelectElement).value);
-                            setPage(1);
-                        }}
-                        className="w-48"
-                    />
-                    <Select
-                        options={[
-                            { value: "", label: "Semua Tipe" },
-                            { value: "application/pdf", label: "PDF" },
-                            {
-                                value: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                                label: "DOCX",
-                            },
-                            {
-                                value: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                                label: "PPTX",
-                            },
-                            {
-                                value: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                label: "XLSX",
-                            },
-                        ]}
-                        label="FORMAT"
-                        value={filterType}
-                        onChange={(e) => {
-                            setFilterType((e.target as HTMLSelectElement).value);
-                            setPage(1);
-                        }}
-                    />
-                </div>
-
-                <div className="flex items-center gap-3">
-                    <Select
-                        options={[
-                            { value: "newest", label: "Terbaru" },
-                            { value: "oldest", label: "Terlama" },
-                            { value: "title", label: "A-Z" },
-                            { value: "size", label: "Ukuran" },
-                        ]}
-                        label="URUTKAN"
-                        value={sort}
-                        onChange={(e) => setSort((e.target as HTMLSelectElement).value)}
-                    />
-
-                    <div className="flex items-center gap-1 bg-surface-container-low rounded-md p-1">
-                        <button
-                            onClick={() => {
-                                setView("grid");
-                                setPage(1);
-                            }}
-                            className={`p-1.5 rounded-sm transition-colors ${
-                                view === "grid"
-                                    ? "bg-surface-container-lowest text-secondary"
-                                    : "text-on-surface/40 hover:text-on-surface"
-                            }`}
-                        >
-                            <GridIcon className="w-4 h-4" />
-                        </button>
-                        <button
-                            onClick={() => {
-                                setView("list");
-                                setPage(1);
-                            }}
-                            className={`p-1.5 rounded-sm transition-colors ${
-                                view === "list"
-                                    ? "bg-surface-container-lowest text-secondary"
-                                    : "text-on-surface/40 hover:text-on-surface"
-                            }`}
-                        >
-                            <ListIcon className="w-4 h-4" />
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {loading ? (
-                <div className="flex flex-col items-center justify-center py-20">
-                    <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mb-4" />
-                    <p className="text-sm text-on-surface/50">Memuat file...</p>
-                </div>
-            ) : (
+            {selectedCard && selectedSubjectCard && contentTab === "file" && (
                 <>
-                    <p className="text-xs text-on-surface/40 mb-4">
-                        {filtered.length} file ditemukan
-                    </p>
+                    <div className="mb-4 text-xs text-on-surface/60">
+                        Menampilkan: <span className="font-semibold text-primary">{selectedCard.name}</span>
+                        {selectedSubjectCard && (
+                            <>
+                                <span> › </span>
+                                <span className="font-semibold text-primary">
+                                    {selectedSubjectCard.subjectLabel}
+                                </span>
+                            </>
+                        )}
+                    </div>
 
-                    <FileGrid files={paginated} view={view} />
-
-                    {totalPages > 1 && (
-                        <div className="flex items-center justify-center gap-2 mt-8">
-                            <button
-                                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                disabled={safeCurrentPage <= 1}
-                                className="px-3 py-1.5 text-xs rounded-md bg-surface-container-low text-on-surface/60 hover:text-on-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                            >
-                                ← Sebelumnya
-                            </button>
-                            <span className="text-xs text-on-surface/50">
-                                Halaman {safeCurrentPage} dari {totalPages}
-                            </span>
-                            <button
-                                onClick={() =>
-                                    setPage((p) => Math.min(totalPages, p + 1))
-                                }
-                                disabled={safeCurrentPage >= totalPages}
-                                className="px-3 py-1.5 text-xs rounded-md bg-surface-container-low text-on-surface/60 hover:text-on-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                            >
-                                Selanjutnya →
-                            </button>
+                    <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+                        <div className="flex items-center gap-3">
+                            <Select
+                                options={[
+                                    { value: "", label: "Semua Mata Kuliah" },
+                                    ...selectedKelompokSubjects.map((s) => ({
+                                        value: s.subjectKey,
+                                        label: s.subjectLabel,
+                                    })),
+                                ]}
+                                label="MATA KULIAH"
+                                value={selectedSubjectKey}
+                                onChange={(e) => {
+                                    const nextKey = normalizeSubjectKey(
+                                        (e.target as HTMLSelectElement).value
+                                    );
+                                    if (!nextKey) {
+                                        setSelectedSubjectKey("");
+                                        setPage(1);
+                                        updateBrowseQuery(selectedKelompok, "");
+                                        return;
+                                    }
+                                    handleSelectSubject(nextKey);
+                                }}
+                                className="w-56"
+                            />
+                            <Select
+                                options={[
+                                    { value: "", label: "Semua Tipe Dokumen" },
+                                    ...docTypeOptions
+                                        .filter((opt) => opt.isActive !== false)
+                                        .map((opt) => ({
+                                            value: opt.code,
+                                            label: opt.label,
+                                        })),
+                                ]}
+                                label="TIPE DOKUMEN"
+                                value={filterDocType}
+                                onChange={(e) => {
+                                    setFilterDocType((e.target as HTMLSelectElement).value);
+                                    setPage(1);
+                                }}
+                                className="w-48"
+                            />
+                            <Select
+                                options={[
+                                    { value: "", label: "Semua Tipe" },
+                                    { value: "application/pdf", label: "PDF" },
+                                    {
+                                        value: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                        label: "DOCX",
+                                    },
+                                    {
+                                        value: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                                        label: "PPTX",
+                                    },
+                                    {
+                                        value: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                        label: "XLSX",
+                                    },
+                                ]}
+                                label="FORMAT"
+                                value={filterType}
+                                onChange={(e) => {
+                                    setFilterType((e.target as HTMLSelectElement).value);
+                                    setPage(1);
+                                }}
+                            />
                         </div>
+
+                        <div className="flex items-center gap-3">
+                            <Select
+                                options={[
+                                    { value: "newest", label: "Terbaru" },
+                                    { value: "oldest", label: "Terlama" },
+                                    { value: "title", label: "A-Z" },
+                                    { value: "size", label: "Ukuran" },
+                                ]}
+                                label="URUTKAN"
+                                value={sort}
+                                onChange={(e) =>
+                                    setSort((e.target as HTMLSelectElement).value)
+                                }
+                            />
+
+                            <div className="flex items-center gap-1 bg-surface-container-low rounded-md p-1">
+                                <button
+                                    onClick={() => {
+                                        setView("grid");
+                                        setPage(1);
+                                    }}
+                                    className={`p-1.5 rounded-sm transition-colors ${
+                                        view === "grid"
+                                            ? "bg-surface-container-lowest text-secondary"
+                                            : "text-on-surface/40 hover:text-on-surface"
+                                    }`}
+                                >
+                                    <GridIcon className="w-4 h-4" />
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setView("list");
+                                        setPage(1);
+                                    }}
+                                    className={`p-1.5 rounded-sm transition-colors ${
+                                        view === "list"
+                                            ? "bg-surface-container-lowest text-secondary"
+                                            : "text-on-surface/40 hover:text-on-surface"
+                                    }`}
+                                >
+                                    <ListIcon className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {loading ? (
+                        <div className="flex flex-col items-center justify-center py-20">
+                            <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin mb-4" />
+                            <p className="text-sm text-on-surface/50">Memuat file...</p>
+                        </div>
+                    ) : (
+                        <>
+                            <p className="text-xs text-on-surface/40 mb-4">
+                                {filtered.length} file ditemukan
+                            </p>
+
+                            <FileGrid files={paginated} view={view} />
+
+                            {totalPages > 1 && (
+                                <div className="flex items-center justify-center gap-2 mt-8">
+                                    <button
+                                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                        disabled={safeCurrentPage <= 1}
+                                        className="px-3 py-1.5 text-xs rounded-md bg-surface-container-low text-on-surface/60 hover:text-on-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        ← Sebelumnya
+                                    </button>
+                                    <span className="text-xs text-on-surface/50">
+                                        Halaman {safeCurrentPage} dari {totalPages}
+                                    </span>
+                                    <button
+                                        onClick={() =>
+                                            setPage((p) => Math.min(totalPages, p + 1))
+                                        }
+                                        disabled={safeCurrentPage >= totalPages}
+                                        className="px-3 py-1.5 text-xs rounded-md bg-surface-container-low text-on-surface/60 hover:text-on-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        Selanjutnya →
+                                    </button>
+                                </div>
+                            )}
+                        </>
                     )}
                 </>
             )}
@@ -747,6 +818,35 @@ function GridIcon({ className }: { className?: string }) {
             <rect x="3" y="14" width="7" height="7" />
             <rect x="14" y="14" width="7" height="7" />
         </svg>
+    );
+}
+
+function DriveTabButton({
+    label,
+    count,
+    selected,
+    onClick,
+}: {
+    label: string;
+    count: number;
+    selected: boolean;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            role="tab"
+            aria-selected={selected}
+            onClick={onClick}
+            className={`px-3 py-1.5 rounded-sm text-sm font-medium transition-colors inline-flex items-center gap-2 ${
+                selected
+                    ? "bg-surface-container-lowest text-secondary"
+                    : "text-on-surface/60 hover:text-on-surface"
+            }`}
+        >
+            <span>{label}</span>
+            <span className="text-[11px] font-mono opacity-80">{count}</span>
+        </button>
     );
 }
 

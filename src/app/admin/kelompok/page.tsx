@@ -1,11 +1,37 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input, Select, Textarea } from "@/components/ui/Input";
-import { KELOMPOK_CARD_STYLE, normalizeKelompokCode } from "@/types";
+import { Modal } from "@/components/ui/Modal";
+import { cn } from "@/lib/utils";
+import {
+    KELOMPOK_CARD_STYLE,
+    normalizeKelompokCode,
+    normalizeSubjectKey,
+} from "@/types";
+
+type ActiveTab = "cards" | "mappings";
+
+type StatusMessage = {
+    type: "success" | "error";
+    text: string;
+} | null;
+
+type CardFormErrors = {
+    code?: string;
+    name?: string;
+    description?: string;
+    photoUrl?: string;
+};
+
+type MappingFormErrors = {
+    subjectLabel?: string;
+    kelompokCode?: string;
+};
 
 type AdminKelompokCard = {
     id: string;
@@ -31,26 +57,71 @@ type UnmappedSubject = {
     subjectLabel: string;
 };
 
+function isValidPhotoUrl(raw: string): boolean {
+    try {
+        const url = new URL(raw);
+        return url.protocol === "https:" || url.protocol === "http:";
+    } catch {
+        return false;
+    }
+}
+
 export default function AdminKelompokPage() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+
+    const activeTabFromQuery: ActiveTab =
+        searchParams.get("tab") === "mappings" ? "mappings" : "cards";
+
+    const [activeTab, setActiveTab] = useState<ActiveTab>(activeTabFromQuery);
+
     const [cards, setCards] = useState<AdminKelompokCard[]>([]);
     const [mappings, setMappings] = useState<SubjectMapping[]>([]);
     const [unmappedSubjects, setUnmappedSubjects] = useState<UnmappedSubject[]>([]);
+
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
+    const [refreshing, setRefreshing] = useState(false);
     const [busyId, setBusyId] = useState<string | null>(null);
+    const [statusMessage, setStatusMessage] = useState<StatusMessage>(null);
 
     const [newCardCode, setNewCardCode] = useState("");
     const [newCardName, setNewCardName] = useState("");
     const [newCardDescription, setNewCardDescription] = useState("");
     const [newCardPhotoUrl, setNewCardPhotoUrl] = useState("");
     const [newCardStyle, setNewCardStyle] = useState<"rect" | "drive">("rect");
+    const [createCardErrors, setCreateCardErrors] = useState<CardFormErrors>({});
 
     const [newSubjectLabel, setNewSubjectLabel] = useState("");
     const [newMappingKelompokCode, setNewMappingKelompokCode] = useState("");
+    const [mappingQuery, setMappingQuery] = useState("");
+    const [createMappingErrors, setCreateMappingErrors] =
+        useState<MappingFormErrors>({});
+    const [pendingDeleteMapping, setPendingDeleteMapping] =
+        useState<SubjectMapping | null>(null);
 
-    const fetchAll = useCallback(async () => {
-        setLoading(true);
-        setError("");
+    useEffect(() => {
+        setActiveTab(activeTabFromQuery);
+    }, [activeTabFromQuery]);
+
+    const updateTabInUrl = useCallback(
+        (nextTab: ActiveTab) => {
+            const params = new URLSearchParams(searchParams.toString());
+            params.set("tab", nextTab);
+            const query = params.toString();
+            router.replace(
+                query ? `/admin/kelompok?${query}` : "/admin/kelompok",
+                { scroll: false }
+            );
+        },
+        [router, searchParams]
+    );
+
+    const fetchAll = useCallback(async (initial = false) => {
+        if (initial) {
+            setLoading(true);
+        } else {
+            setRefreshing(true);
+        }
 
         try {
             const [cardsRes, mappingsRes] = await Promise.all([
@@ -71,7 +142,7 @@ export default function AdminKelompokPage() {
             const cardsData = await cardsRes.json();
             const mappingsData = await mappingsRes.json();
 
-            const mappedCards = Array.isArray(cardsData.cards)
+            const mappedCards: AdminKelompokCard[] = Array.isArray(cardsData.cards)
                 ? cardsData.cards.map((card: Record<string, unknown>) => ({
                       id: String(card.id),
                       code: String(card.code),
@@ -88,7 +159,7 @@ export default function AdminKelompokPage() {
                   }))
                 : [];
 
-            const mappedMappings = Array.isArray(mappingsData.mappings)
+            const mappedMappings: SubjectMapping[] = Array.isArray(mappingsData.mappings)
                 ? mappingsData.mappings.map((row: Record<string, unknown>) => ({
                       id: String(row.id),
                       subjectKey: String(row.subjectKey),
@@ -97,7 +168,9 @@ export default function AdminKelompokPage() {
                   }))
                 : [];
 
-            const mappedUnmapped = Array.isArray(mappingsData.unmappedSubjects)
+            const mappedUnmapped: UnmappedSubject[] = Array.isArray(
+                mappingsData.unmappedSubjects
+            )
                 ? mappingsData.unmappedSubjects.map((row: Record<string, unknown>) => ({
                       subjectKey: String(row.subjectKey),
                       subjectLabel: String(row.subjectLabel),
@@ -108,36 +181,95 @@ export default function AdminKelompokPage() {
             setMappings(mappedMappings);
             setUnmappedSubjects(mappedUnmapped);
             setNewMappingKelompokCode((prev) => {
-                if (prev) return prev;
+                if (prev && mappedCards.some((card) => card.code === prev)) {
+                    return prev;
+                }
                 return mappedCards[0]?.code ?? "";
             });
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Terjadi kesalahan");
+            setStatusMessage({
+                type: "error",
+                text: err instanceof Error ? err.message : "Terjadi kesalahan",
+            });
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
     }, []);
 
     useEffect(() => {
-        fetchAll();
+        fetchAll(true);
     }, [fetchAll]);
 
-    const cardOptions = useMemo(
-        () => cards.map((card) => ({ value: card.code, label: card.name })),
+    const sortedCards = useMemo(
+        () =>
+            [...cards].sort(
+                (a, b) =>
+                    Number(b.isActive) - Number(a.isActive) ||
+                    a.sortOrder - b.sortOrder ||
+                    a.code.localeCompare(b.code)
+            ),
         [cards]
     );
+
+    const cardOptions = useMemo(
+        () => sortedCards.map((card) => ({ value: card.code, label: card.name })),
+        [sortedCards]
+    );
+
+    const mappedSubjectKeys = useMemo(
+        () => new Set(mappings.map((row) => row.subjectKey)),
+        [mappings]
+    );
+
+    const filteredMappings = useMemo(() => {
+        const query = mappingQuery.trim().toLowerCase();
+        if (!query) return mappings;
+
+        return mappings.filter((row) => {
+            return (
+                row.subjectLabel.toLowerCase().includes(query) ||
+                row.subjectKey.toLowerCase().includes(query) ||
+                row.kelompokCode.toLowerCase().includes(query)
+            );
+        });
+    }, [mappings, mappingQuery]);
+
+    const activeCardsCount = sortedCards.filter((row) => row.isActive).length;
+
+    const handleTabChange = (nextTab: ActiveTab) => {
+        setActiveTab(nextTab);
+        updateTabInUrl(nextTab);
+    };
 
     const handleCreateCard = async () => {
         const normalizedCode = normalizeKelompokCode(newCardCode || newCardName);
         const name = newCardName.trim();
+        const description = newCardDescription.trim();
+        const photoUrl = newCardPhotoUrl.trim();
 
-        if (!normalizedCode || !name) {
-            setError("Kode dan nama kelompok wajib diisi.");
+        const errors: CardFormErrors = {};
+        if (!normalizedCode) errors.code = "Kode kelompok wajib diisi";
+        if (!name) errors.name = "Nama kelompok wajib diisi";
+        if (description.length > 300) {
+            errors.description = "Deskripsi maksimal 300 karakter";
+        }
+        if (photoUrl && !isValidPhotoUrl(photoUrl)) {
+            errors.photoUrl = "URL foto tidak valid";
+        }
+
+        setCreateCardErrors(errors);
+
+        if (Object.keys(errors).length > 0) {
+            setStatusMessage({
+                type: "error",
+                text: "Periksa kembali data kartu sebelum disimpan.",
+            });
             return;
         }
 
-        setError("");
         setBusyId("new-card");
+        setStatusMessage(null);
 
         try {
             const res = await fetch("/api/admin/kelompok", {
@@ -146,8 +278,8 @@ export default function AdminKelompokPage() {
                 body: JSON.stringify({
                     code: normalizedCode,
                     name,
-                    description: newCardDescription.trim(),
-                    photoUrl: newCardPhotoUrl.trim(),
+                    description,
+                    photoUrl,
                     cardStyle: newCardStyle,
                 }),
             });
@@ -162,17 +294,25 @@ export default function AdminKelompokPage() {
             setNewCardDescription("");
             setNewCardPhotoUrl("");
             setNewCardStyle("rect");
+            setCreateCardErrors({});
+            setStatusMessage({
+                type: "success",
+                text: "Kartu kelompok berhasil ditambahkan.",
+            });
             await fetchAll();
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Terjadi kesalahan");
+            setStatusMessage({
+                type: "error",
+                text: err instanceof Error ? err.message : "Terjadi kesalahan",
+            });
         } finally {
             setBusyId(null);
         }
     };
 
     const handleSaveCard = async (card: AdminKelompokCard) => {
-        setError("");
         setBusyId(card.id);
+        setStatusMessage(null);
 
         try {
             const res = await fetch("/api/admin/kelompok", {
@@ -194,9 +334,16 @@ export default function AdminKelompokPage() {
                 throw new Error(payload.error ?? "Gagal menyimpan kartu kelompok");
             }
 
+            setStatusMessage({
+                type: "success",
+                text: `Perubahan untuk ${card.name} berhasil disimpan.`,
+            });
             await fetchAll();
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Terjadi kesalahan");
+            setStatusMessage({
+                type: "error",
+                text: err instanceof Error ? err.message : "Terjadi kesalahan",
+            });
         } finally {
             setBusyId(null);
         }
@@ -204,13 +351,33 @@ export default function AdminKelompokPage() {
 
     const handleCreateMapping = async () => {
         const subjectLabel = newSubjectLabel.trim();
-        if (!subjectLabel || !newMappingKelompokCode) {
-            setError("Pilih kelompok dan isi mata kuliah terlebih dahulu.");
+        const subjectKey = normalizeSubjectKey(subjectLabel);
+
+        const errors: MappingFormErrors = {};
+        if (!subjectLabel) {
+            errors.subjectLabel = "Nama mata kuliah wajib diisi";
+        } else if (subjectLabel.length > 120) {
+            errors.subjectLabel = "Nama mata kuliah maksimal 120 karakter";
+        } else if (mappedSubjectKeys.has(subjectKey)) {
+            errors.subjectLabel = "Mata kuliah ini sudah memiliki mapping";
+        }
+
+        if (!newMappingKelompokCode) {
+            errors.kelompokCode = "Pilih kelompok terlebih dahulu";
+        }
+
+        setCreateMappingErrors(errors);
+
+        if (Object.keys(errors).length > 0) {
+            setStatusMessage({
+                type: "error",
+                text: "Periksa mapping sebelum ditambahkan.",
+            });
             return;
         }
 
-        setError("");
         setBusyId("new-mapping");
+        setStatusMessage(null);
 
         try {
             const res = await fetch("/api/admin/kelompok/mappings", {
@@ -228,17 +395,34 @@ export default function AdminKelompokPage() {
             }
 
             setNewSubjectLabel("");
+            setCreateMappingErrors({});
+            setStatusMessage({
+                type: "success",
+                text: "Mapping mata kuliah berhasil ditambahkan.",
+            });
             await fetchAll();
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Terjadi kesalahan");
+            setStatusMessage({
+                type: "error",
+                text: err instanceof Error ? err.message : "Terjadi kesalahan",
+            });
         } finally {
             setBusyId(null);
         }
     };
 
     const handleSaveMapping = async (row: SubjectMapping) => {
-        setError("");
+        const nextSubjectLabel = row.subjectLabel.trim();
+        if (!nextSubjectLabel) {
+            setStatusMessage({
+                type: "error",
+                text: "Nama mata kuliah wajib diisi.",
+            });
+            return;
+        }
+
         setBusyId(row.id);
+        setStatusMessage(null);
 
         try {
             const res = await fetch("/api/admin/kelompok/mappings", {
@@ -246,7 +430,7 @@ export default function AdminKelompokPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     id: row.id,
-                    subjectLabel: row.subjectLabel,
+                    subjectLabel: nextSubjectLabel,
                     kelompokCode: row.kelompokCode,
                 }),
             });
@@ -256,23 +440,32 @@ export default function AdminKelompokPage() {
                 throw new Error(payload.error ?? "Gagal menyimpan mapping");
             }
 
+            setStatusMessage({
+                type: "success",
+                text: `Mapping untuk ${nextSubjectLabel} berhasil disimpan.`,
+            });
             await fetchAll();
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Terjadi kesalahan");
+            setStatusMessage({
+                type: "error",
+                text: err instanceof Error ? err.message : "Terjadi kesalahan",
+            });
         } finally {
             setBusyId(null);
         }
     };
 
-    const handleDeleteMapping = async (id: string) => {
-        setError("");
-        setBusyId(id);
+    const handleConfirmDeleteMapping = async () => {
+        if (!pendingDeleteMapping) return;
+
+        setBusyId(pendingDeleteMapping.id);
+        setStatusMessage(null);
 
         try {
             const res = await fetch("/api/admin/kelompok/mappings", {
                 method: "DELETE",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id }),
+                body: JSON.stringify({ id: pendingDeleteMapping.id }),
             });
 
             if (!res.ok) {
@@ -280,9 +473,17 @@ export default function AdminKelompokPage() {
                 throw new Error(payload.error ?? "Gagal menghapus mapping");
             }
 
+            setPendingDeleteMapping(null);
+            setStatusMessage({
+                type: "success",
+                text: "Mapping mata kuliah berhasil dihapus.",
+            });
             await fetchAll();
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Terjadi kesalahan");
+            setStatusMessage({
+                type: "error",
+                text: err instanceof Error ? err.message : "Terjadi kesalahan",
+            });
         } finally {
             setBusyId(null);
         }
@@ -295,161 +496,412 @@ export default function AdminKelompokPage() {
                 <span>›</span>
                 <span className="text-on-surface/70">KELOMPOK KEILMUAN</span>
             </div>
+
             <h1 className="text-3xl font-display font-bold text-primary mb-2">
                 Kelompok Keilmuan
             </h1>
             <p className="text-sm text-on-surface/60 mb-6 max-w-3xl">
-                Kelola kartu kategori utama pada dashboard pencarian serta mapping mata kuliah
-                ke kategori agar filter berjalan otomatis.
+                Kelola kartu kategori utama dan mapping mata kuliah dengan alur kerja
+                yang terpisah agar lebih cepat dipelihara.
             </p>
 
-            {error && (
-                <div className="mb-4 p-3 rounded-md bg-red-100 text-red-700 text-sm">
-                    {error}
+            <div aria-live="polite" role="status" className="sr-only">
+                {statusMessage?.text ?? ""}
+            </div>
+
+            {statusMessage && (
+                <div
+                    className={cn(
+                        "mb-5 rounded-md px-4 py-3 text-sm flex items-start justify-between gap-3",
+                        statusMessage.type === "error"
+                            ? "bg-red-100/70 text-red-700"
+                            : "bg-secondary-container text-on-secondary-container"
+                    )}
+                >
+                    <p>{statusMessage.text}</p>
+                    <button
+                        type="button"
+                        className="text-xs font-medium opacity-80 hover:opacity-100"
+                        onClick={() => setStatusMessage(null)}
+                    >
+                        Tutup
+                    </button>
                 </div>
             )}
+
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+                <div
+                    role="tablist"
+                    aria-label="Kelompok tabs"
+                    className="inline-flex items-center rounded-md bg-surface-container-low p-1"
+                >
+                    <TabButton
+                        id="tab-cards"
+                        selected={activeTab === "cards"}
+                        onClick={() => handleTabChange("cards")}
+                        label="Cards"
+                        count={sortedCards.length}
+                    />
+                    <TabButton
+                        id="tab-mappings"
+                        selected={activeTab === "mappings"}
+                        onClick={() => handleTabChange("mappings")}
+                        label="Mappings"
+                        count={mappings.length}
+                    />
+                </div>
+
+                {refreshing && (
+                    <p className="text-xs text-on-surface/50">Memuat ulang data...</p>
+                )}
+            </div>
 
             {loading ? (
                 <Card>
-                    <p className="text-sm text-on-surface/60">Memuat konfigurasi kelompok...</p>
+                    <div className="flex items-center gap-3">
+                        <div className="w-5 h-5 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                        <p className="text-sm text-on-surface/60">Memuat konfigurasi kelompok...</p>
+                    </div>
                 </Card>
             ) : (
-                <div className="space-y-6">
-                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
-                        <Card className="xl:col-span-1 space-y-4">
-                            <h2 className="text-lg font-display font-semibold text-primary">
-                                Tambah Kartu Kelompok
-                            </h2>
-                            <Input
-                                id="new-card-code"
-                                label="KODE"
-                                placeholder="Contoh: KIMIA_POLIMER"
-                                value={newCardCode}
-                                onChange={(e) => setNewCardCode(e.target.value)}
-                            />
-                            <Input
-                                id="new-card-name"
-                                label="NAMA"
-                                placeholder="Contoh: Kimia Polimer"
-                                value={newCardName}
-                                onChange={(e) => setNewCardName(e.target.value)}
-                            />
-                            <Textarea
-                                id="new-card-description"
-                                label="DESKRIPSI"
-                                placeholder="Deskripsi singkat kartu"
-                                value={newCardDescription}
-                                onChange={(e) => setNewCardDescription(e.target.value)}
-                            />
-                            <Input
-                                id="new-card-photo-url"
-                                label="PHOTO URL"
-                                placeholder="https://..."
-                                value={newCardPhotoUrl}
-                                onChange={(e) => setNewCardPhotoUrl(e.target.value)}
-                            />
-                            <Select
-                                id="new-card-style"
-                                label="GAYA KARTU"
-                                value={newCardStyle}
-                                onChange={(e) => setNewCardStyle((e.target as HTMLSelectElement).value as "rect" | "drive")}
-                                options={[
-                                    { value: "rect", label: "Rectangular" },
-                                    { value: "drive", label: "Drive-like" },
-                                ]}
-                            />
-                            <Button
-                                className="w-full"
-                                onClick={handleCreateCard}
-                                disabled={busyId === "new-card"}
-                            >
-                                {busyId === "new-card" ? "Menyimpan..." : "Tambah Kartu"}
-                            </Button>
-                        </Card>
+                <>
+                    {activeTab === "cards" && (
+                        <section
+                            role="tabpanel"
+                            id="panel-cards"
+                            aria-labelledby="tab-cards"
+                            className="space-y-5"
+                        >
+                            <div className="grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-6 items-start">
+                                <Card className="space-y-4 lg:sticky lg:top-6">
+                                    <div className="space-y-1">
+                                        <h2 className="text-lg font-display font-semibold text-primary">
+                                            Tambah Kartu Kelompok
+                                        </h2>
+                                        <p className="text-xs text-on-surface/55">
+                                            Buat kategori baru untuk dashboard anggota.
+                                        </p>
+                                    </div>
 
-                        <div className="xl:col-span-2 space-y-4">
-                            {cards.map((card) => (
-                                <KelompokCardEditor
-                                    key={card.id}
-                                    initial={card}
-                                    busy={busyId === card.id}
-                                    onSave={handleSaveCard}
-                                />
-                            ))}
-                        </div>
-                    </div>
+                                    <Input
+                                        id="new-card-code"
+                                        label="KODE"
+                                        placeholder="Contoh: KIMIA_POLIMER"
+                                        value={newCardCode}
+                                        error={createCardErrors.code}
+                                        disabled={busyId === "new-card"}
+                                        onChange={(e) => {
+                                            setCreateCardErrors((prev) => ({
+                                                ...prev,
+                                                code: undefined,
+                                            }));
+                                            setNewCardCode(e.target.value);
+                                        }}
+                                    />
+                                    <Input
+                                        id="new-card-name"
+                                        label="NAMA"
+                                        placeholder="Contoh: Kimia Polimer"
+                                        value={newCardName}
+                                        error={createCardErrors.name}
+                                        disabled={busyId === "new-card"}
+                                        onChange={(e) => {
+                                            setCreateCardErrors((prev) => ({
+                                                ...prev,
+                                                name: undefined,
+                                            }));
+                                            setNewCardName(e.target.value);
+                                        }}
+                                    />
+                                    <Textarea
+                                        id="new-card-description"
+                                        label="DESKRIPSI"
+                                        placeholder="Deskripsi singkat kartu"
+                                        value={newCardDescription}
+                                        error={createCardErrors.description}
+                                        disabled={busyId === "new-card"}
+                                        onChange={(e) => {
+                                            setCreateCardErrors((prev) => ({
+                                                ...prev,
+                                                description: undefined,
+                                            }));
+                                            setNewCardDescription(e.target.value);
+                                        }}
+                                    />
+                                    <Input
+                                        id="new-card-photo-url"
+                                        label="PHOTO URL"
+                                        placeholder="https://..."
+                                        value={newCardPhotoUrl}
+                                        error={createCardErrors.photoUrl}
+                                        disabled={busyId === "new-card"}
+                                        onChange={(e) => {
+                                            setCreateCardErrors((prev) => ({
+                                                ...prev,
+                                                photoUrl: undefined,
+                                            }));
+                                            setNewCardPhotoUrl(e.target.value);
+                                        }}
+                                    />
+                                    <Select
+                                        id="new-card-style"
+                                        label="GAYA KARTU"
+                                        value={newCardStyle}
+                                        disabled={busyId === "new-card"}
+                                        onChange={(e) =>
+                                            setNewCardStyle(
+                                                (e.target as HTMLSelectElement)
+                                                    .value as "rect" | "drive"
+                                            )
+                                        }
+                                        options={[
+                                            { value: "rect", label: "Rectangular" },
+                                            { value: "drive", label: "Drive-like" },
+                                        ]}
+                                    />
 
-                    <Card>
-                        <h2 className="text-lg font-display font-semibold text-primary mb-4">
-                            Mapping Mata Kuliah ke Kelompok
-                        </h2>
+                                    <Button
+                                        className="w-full"
+                                        onClick={handleCreateCard}
+                                        disabled={busyId === "new-card"}
+                                    >
+                                        {busyId === "new-card"
+                                            ? "Menyimpan..."
+                                            : "Tambah Kartu"}
+                                    </Button>
+                                </Card>
 
-                        {unmappedSubjects.length > 0 && (
-                            <div className="mb-4 p-3 rounded-md bg-yellow-50 border border-yellow-200">
-                                <p className="text-xs text-yellow-700 mb-2">
-                                    Mata kuliah belum dipetakan ({unmappedSubjects.length}):
-                                </p>
-                                <div className="flex flex-wrap gap-2">
-                                    {unmappedSubjects.slice(0, 12).map((row) => (
-                                        <button
-                                            key={row.subjectKey}
-                                            className="px-2 py-1 rounded-md text-xs bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors"
-                                            onClick={() => setNewSubjectLabel(row.subjectLabel)}
-                                            type="button"
-                                        >
-                                            {row.subjectLabel}
-                                        </button>
-                                    ))}
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                                        <h2 className="text-lg font-display font-semibold text-primary">
+                                            Daftar Kartu
+                                        </h2>
+                                        <p className="text-xs text-on-surface/55">
+                                            {activeCardsCount} aktif dari {sortedCards.length} kartu
+                                        </p>
+                                    </div>
+
+                                    {sortedCards.length === 0 ? (
+                                        <Card>
+                                            <p className="text-sm text-on-surface/60">
+                                                Belum ada kartu kelompok.
+                                            </p>
+                                        </Card>
+                                    ) : (
+                                        sortedCards.map((card) => (
+                                            <KelompokCardEditor
+                                                key={card.id}
+                                                initial={card}
+                                                busy={busyId === card.id}
+                                                onSave={handleSaveCard}
+                                            />
+                                        ))
+                                    )}
                                 </div>
                             </div>
-                        )}
+                        </section>
+                    )}
 
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mb-4 items-end">
-                            <div className="md:col-span-6">
+                    {activeTab === "mappings" && (
+                        <section
+                            role="tabpanel"
+                            id="panel-mappings"
+                            aria-labelledby="tab-mappings"
+                            className="space-y-5"
+                        >
+                            <Card className="space-y-5">
+                                <div className="flex items-center justify-between gap-3 flex-wrap">
+                                    <div>
+                                        <h2 className="text-lg font-display font-semibold text-primary">
+                                            Mapping Mata Kuliah
+                                        </h2>
+                                        <p className="text-xs text-on-surface/55 mt-1">
+                                            Kelola hubungan mata kuliah ke kategori agar browsing
+                                            tetap rapi.
+                                        </p>
+                                    </div>
+                                    <p className="text-xs text-on-surface/55">
+                                        {mappings.length} mapping tersimpan
+                                    </p>
+                                </div>
+
+                                {unmappedSubjects.length > 0 && (
+                                    <div className="rounded-md bg-tertiary-fixed-dim/20 p-3">
+                                        <p className="text-xs text-on-surface/70 mb-2">
+                                            Mata kuliah belum dipetakan ({unmappedSubjects.length}):
+                                        </p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {unmappedSubjects.slice(0, 18).map((row) => (
+                                                <button
+                                                    key={row.subjectKey}
+                                                    type="button"
+                                                    className="px-2 py-1 rounded-md text-xs bg-surface-container-lowest text-on-surface/80 hover:bg-surface-container-high transition-colors"
+                                                    onClick={() => {
+                                                        setCreateMappingErrors((prev) => ({
+                                                            ...prev,
+                                                            subjectLabel: undefined,
+                                                        }));
+                                                        setNewSubjectLabel(row.subjectLabel);
+                                                    }}
+                                                >
+                                                    {row.subjectLabel}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] gap-3 items-end">
+                                    <Input
+                                        id="new-subject-label"
+                                        label="MATA KULIAH"
+                                        placeholder="Contoh: KIXX2X Kimia Analitik"
+                                        value={newSubjectLabel}
+                                        error={createMappingErrors.subjectLabel}
+                                        disabled={busyId === "new-mapping"}
+                                        onChange={(e) => {
+                                            setCreateMappingErrors((prev) => ({
+                                                ...prev,
+                                                subjectLabel: undefined,
+                                            }));
+                                            setNewSubjectLabel(e.target.value);
+                                        }}
+                                    />
+
+                                    <Select
+                                        id="new-mapping-kelompok"
+                                        label="KELOMPOK"
+                                        value={newMappingKelompokCode}
+                                        error={createMappingErrors.kelompokCode}
+                                        disabled={busyId === "new-mapping"}
+                                        onChange={(e) => {
+                                            setCreateMappingErrors((prev) => ({
+                                                ...prev,
+                                                kelompokCode: undefined,
+                                            }));
+                                            setNewMappingKelompokCode(
+                                                (e.target as HTMLSelectElement).value
+                                            );
+                                        }}
+                                        options={
+                                            cardOptions.length > 0
+                                                ? cardOptions
+                                                : [{ value: "", label: "Belum ada kartu" }]
+                                        }
+                                    />
+
+                                    <Button
+                                        className="w-full md:w-auto"
+                                        onClick={handleCreateMapping}
+                                        disabled={
+                                            busyId === "new-mapping" || cardOptions.length === 0
+                                        }
+                                    >
+                                        {busyId === "new-mapping"
+                                            ? "Menyimpan..."
+                                            : "Tambah"}
+                                    </Button>
+                                </div>
+
                                 <Input
-                                    id="new-subject-label"
-                                    label="MATA KULIAH"
-                                    placeholder="Contoh: KIXX2X Kimia Analitik"
-                                    value={newSubjectLabel}
-                                    onChange={(e) => setNewSubjectLabel(e.target.value)}
+                                    id="mapping-search"
+                                    label="CARI MAPPING"
+                                    placeholder="Cari mata kuliah, key, atau kode kelompok"
+                                    value={mappingQuery}
+                                    onChange={(e) => setMappingQuery(e.target.value)}
                                 />
-                            </div>
-                            <div className="md:col-span-4">
-                                <Select
-                                    id="new-mapping-kelompok"
-                                    label="KELOMPOK"
-                                    value={newMappingKelompokCode}
-                                    onChange={(e) => setNewMappingKelompokCode((e.target as HTMLSelectElement).value)}
-                                    options={cardOptions.length > 0 ? cardOptions : [{ value: "", label: "Belum ada kartu" }]}
-                                />
-                            </div>
-                            <div className="md:col-span-2">
-                                <Button
-                                    className="w-full"
-                                    onClick={handleCreateMapping}
-                                    disabled={busyId === "new-mapping" || cardOptions.length === 0}
-                                >
-                                    {busyId === "new-mapping" ? "..." : "Tambah"}
-                                </Button>
-                            </div>
-                        </div>
+                            </Card>
 
-                        <div className="space-y-3">
-                            {mappings.map((row) => (
-                                <MappingRowEditor
-                                    key={row.id}
-                                    initial={row}
-                                    busy={busyId === row.id}
-                                    cardOptions={cardOptions}
-                                    onSave={handleSaveMapping}
-                                    onDelete={handleDeleteMapping}
-                                />
-                            ))}
-                        </div>
-                    </Card>
-                </div>
+                            <div className="space-y-3">
+                                {filteredMappings.length === 0 ? (
+                                    <Card>
+                                        <p className="text-sm text-on-surface/60">
+                                            Tidak ada mapping yang cocok dengan pencarian.
+                                        </p>
+                                    </Card>
+                                ) : (
+                                    filteredMappings.map((row) => (
+                                        <MappingRowEditor
+                                            key={row.id}
+                                            initial={row}
+                                            busy={busyId === row.id}
+                                            cardOptions={cardOptions}
+                                            onSave={handleSaveMapping}
+                                            onRequestDelete={(target) =>
+                                                setPendingDeleteMapping(target)
+                                            }
+                                        />
+                                    ))
+                                )}
+                            </div>
+                        </section>
+                    )}
+                </>
             )}
+
+            <Modal
+                open={Boolean(pendingDeleteMapping)}
+                onClose={() => setPendingDeleteMapping(null)}
+                title="Hapus Mapping"
+            >
+                <p className="text-sm text-on-surface/70 mb-4">
+                    Mapping untuk <strong>{pendingDeleteMapping?.subjectLabel}</strong> akan
+                    dihapus permanen. Lanjutkan?
+                </p>
+                <div className="flex justify-end gap-2">
+                    <Button
+                        variant="ghost"
+                        onClick={() => setPendingDeleteMapping(null)}
+                    >
+                        Batal
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        className="text-red-700 hover:text-red-800"
+                        disabled={
+                            !pendingDeleteMapping || busyId === pendingDeleteMapping.id
+                        }
+                        onClick={handleConfirmDeleteMapping}
+                    >
+                        {pendingDeleteMapping && busyId === pendingDeleteMapping.id
+                            ? "Menghapus..."
+                            : "Hapus Mapping"}
+                    </Button>
+                </div>
+            </Modal>
         </div>
+    );
+}
+
+function TabButton({
+    id,
+    label,
+    count,
+    selected,
+    onClick,
+}: {
+    id: string;
+    label: string;
+    count: number;
+    selected: boolean;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            id={id}
+            role="tab"
+            aria-selected={selected}
+            onClick={onClick}
+            className={cn(
+                "px-3 py-1.5 rounded-sm text-sm font-medium transition-colors inline-flex items-center gap-2",
+                selected
+                    ? "bg-surface-container-lowest text-secondary"
+                    : "text-on-surface/60 hover:text-on-surface"
+            )}
+        >
+            <span>{label}</span>
+            <span className="text-[11px] font-mono opacity-80">{count}</span>
+        </button>
     );
 }
 
@@ -463,64 +915,155 @@ function KelompokCardEditor({
     onSave: (card: AdminKelompokCard) => Promise<void>;
 }) {
     const [draft, setDraft] = useState(initial);
+    const [errors, setErrors] = useState<{
+        name?: string;
+        description?: string;
+        photoUrl?: string;
+        sortOrder?: string;
+    }>({});
+    const [confirmArchiveOpen, setConfirmArchiveOpen] = useState(false);
 
     useEffect(() => {
         setDraft(initial);
+        setErrors({});
     }, [initial]);
+
+    const handleSave = async () => {
+        const name = draft.name.trim();
+        const description = (draft.description ?? "").trim();
+        const photoUrl = (draft.photoUrl ?? "").trim();
+
+        const nextErrors: {
+            name?: string;
+            description?: string;
+            photoUrl?: string;
+            sortOrder?: string;
+        } = {};
+
+        if (!name) {
+            nextErrors.name = "Nama kelompok wajib diisi";
+        } else if (name.length > 80) {
+            nextErrors.name = "Nama kelompok maksimal 80 karakter";
+        }
+
+        if (description.length > 300) {
+            nextErrors.description = "Deskripsi maksimal 300 karakter";
+        }
+
+        if (photoUrl && !isValidPhotoUrl(photoUrl)) {
+            nextErrors.photoUrl = "URL foto tidak valid";
+        }
+
+        if (!Number.isFinite(draft.sortOrder) || draft.sortOrder < 0) {
+            nextErrors.sortOrder = "Urutan harus angka 0 atau lebih";
+        }
+
+        setErrors(nextErrors);
+        if (Object.keys(nextErrors).length > 0) return;
+
+        await onSave({
+            ...draft,
+            name,
+            description: description || null,
+            photoUrl: photoUrl || null,
+            sortOrder: Math.floor(draft.sortOrder),
+        });
+    };
+
+    const handleToggleActive = () => {
+        if (busy || draft.isSystem) return;
+
+        if (draft.isActive) {
+            setConfirmArchiveOpen(true);
+            return;
+        }
+
+        setDraft((prev) => ({ ...prev, isActive: true }));
+    };
 
     return (
         <Card className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 flex-wrap">
                     <Badge variant="data">{draft.code}</Badge>
-                    <Badge variant={draft.cardStyle === "drive" ? "subject" : "default"}>
-                        {draft.cardStyle === "drive" ? "Drive-like" : "Rectangular"}
-                    </Badge>
                     <Badge variant={draft.isActive ? "flag-green" : "flag-yellow"}>
                         {draft.isActive ? "Aktif" : "Diarsipkan"}
                     </Badge>
-                    {draft.isSystem && <Badge variant="default">System</Badge>}
+                    {draft.isSystem && (
+                        <span className="text-xs text-on-surface/45">Kartu sistem</span>
+                    )}
                 </div>
+
                 <Button
                     variant="secondary"
+                    className={cn(
+                        draft.isActive && "text-red-700 hover:text-red-800"
+                    )}
                     disabled={busy || draft.isSystem}
-                    title={draft.isSystem ? "Kartu sistem tidak dapat diarsipkan" : ""}
-                    onClick={() => setDraft((prev) => ({ ...prev, isActive: !prev.isActive }))}
+                    title={
+                        draft.isSystem
+                            ? "Kartu sistem tidak dapat diarsipkan"
+                            : ""
+                    }
+                    onClick={handleToggleActive}
                 >
                     {draft.isActive ? "Arsipkan" : "Aktifkan"}
                 </Button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-                <div className="lg:col-span-2 space-y-3">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_280px] gap-4 items-start">
+                <div className="order-2 lg:order-1 space-y-3">
                     <Input
                         id={`name-${draft.id}`}
                         label="NAMA"
                         value={draft.name}
-                        onChange={(e) => setDraft((prev) => ({ ...prev, name: e.target.value }))}
+                        disabled={busy}
+                        error={errors.name}
+                        onChange={(e) => {
+                            setErrors((prev) => ({ ...prev, name: undefined }));
+                            setDraft((prev) => ({ ...prev, name: e.target.value }));
+                        }}
                     />
+
                     <Textarea
                         id={`description-${draft.id}`}
                         label="DESKRIPSI"
                         value={draft.description ?? ""}
-                        onChange={(e) => setDraft((prev) => ({ ...prev, description: e.target.value }))}
+                        disabled={busy}
+                        error={errors.description}
+                        onChange={(e) => {
+                            setErrors((prev) => ({ ...prev, description: undefined }));
+                            setDraft((prev) => ({
+                                ...prev,
+                                description: e.target.value,
+                            }));
+                        }}
                     />
+
                     <Input
                         id={`photo-${draft.id}`}
                         label="PHOTO URL"
                         placeholder="https://..."
                         value={draft.photoUrl ?? ""}
-                        onChange={(e) => setDraft((prev) => ({ ...prev, photoUrl: e.target.value }))}
+                        disabled={busy}
+                        error={errors.photoUrl}
+                        onChange={(e) => {
+                            setErrors((prev) => ({ ...prev, photoUrl: undefined }));
+                            setDraft((prev) => ({ ...prev, photoUrl: e.target.value }));
+                        }}
                     />
-                    <div className="grid grid-cols-2 gap-3">
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <Select
                             id={`style-${draft.id}`}
                             label="GAYA"
                             value={draft.cardStyle}
+                            disabled={busy}
                             onChange={(e) =>
                                 setDraft((prev) => ({
                                     ...prev,
-                                    cardStyle: (e.target as HTMLSelectElement).value as "rect" | "drive",
+                                    cardStyle: (e.target as HTMLSelectElement)
+                                        .value as "rect" | "drive",
                                 }))
                             }
                             options={[
@@ -528,29 +1071,65 @@ function KelompokCardEditor({
                                 { value: "drive", label: "Drive-like" },
                             ]}
                         />
+
                         <Input
                             id={`order-${draft.id}`}
                             label="URUTAN"
                             type="number"
                             value={String(draft.sortOrder)}
-                            onChange={(e) =>
+                            disabled={busy}
+                            error={errors.sortOrder}
+                            onChange={(e) => {
+                                setErrors((prev) => ({ ...prev, sortOrder: undefined }));
+                                const parsed = Number(e.target.value);
                                 setDraft((prev) => ({
                                     ...prev,
-                                    sortOrder: Number(e.target.value || "0"),
-                                }))
-                            }
+                                    sortOrder: Number.isFinite(parsed) ? parsed : 0,
+                                }));
+                            }}
                         />
                     </div>
                 </div>
 
-                <CardPreview draft={draft} />
+                <div className="order-1 lg:order-2">
+                    <CardPreview draft={draft} />
+                </div>
             </div>
 
             <div className="flex justify-end">
-                <Button disabled={busy} onClick={() => onSave(draft)}>
+                <Button disabled={busy} onClick={handleSave}>
                     {busy ? "Menyimpan..." : "Simpan"}
                 </Button>
             </div>
+
+            <Modal
+                open={confirmArchiveOpen}
+                onClose={() => setConfirmArchiveOpen(false)}
+                title="Arsipkan Kartu"
+            >
+                <p className="text-sm text-on-surface/70 mb-4">
+                    Kartu <strong>{draft.name}</strong> tidak akan tampil di dashboard
+                    anggota sampai diaktifkan kembali.
+                </p>
+                <p className="text-xs text-on-surface/55 mb-4">
+                    Perubahan status akan diterapkan setelah Anda menekan tombol Simpan.
+                </p>
+                <div className="flex justify-end gap-2">
+                    <Button variant="ghost" onClick={() => setConfirmArchiveOpen(false)}>
+                        Batal
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        className="text-red-700 hover:text-red-800"
+                        onClick={() => {
+                            setDraft((prev) => ({ ...prev, isActive: false }));
+                            setConfirmArchiveOpen(false);
+                        }}
+                    >
+                        Arsipkan
+                    </Button>
+                </div>
+            </Modal>
         </Card>
     );
 }
@@ -558,14 +1137,16 @@ function KelompokCardEditor({
 function CardPreview({ draft }: { draft: AdminKelompokCard }) {
     if (draft.cardStyle === "drive") {
         return (
-            <div className="rounded-md border border-outline-variant/20 bg-surface-container-low p-4">
+            <div className="rounded-md bg-surface-container-low p-4 ghost-border">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-md bg-surface-container-high flex items-center justify-center text-on-surface/60">
                         <DriveIcon className="w-5 h-5" />
                     </div>
                     <div>
-                        <p className="text-sm font-semibold text-primary">{draft.name || "Nama Kelompok"}</p>
-                        <p className="text-xs text-on-surface/50 line-clamp-2">
+                        <p className="text-sm font-semibold text-primary">
+                            {draft.name || "Nama Kelompok"}
+                        </p>
+                        <p className="text-xs text-on-surface/50 line-clamp-2 mt-0.5">
                             {draft.description || "Deskripsi kartu drive-like."}
                         </p>
                     </div>
@@ -575,7 +1156,7 @@ function CardPreview({ draft }: { draft: AdminKelompokCard }) {
     }
 
     return (
-        <div className="rounded-md border border-outline-variant/20 overflow-hidden bg-surface-container-low">
+        <div className="rounded-md overflow-hidden bg-surface-container-low ghost-border">
             {draft.photoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -584,10 +1165,12 @@ function CardPreview({ draft }: { draft: AdminKelompokCard }) {
                     className="w-full h-28 object-cover"
                 />
             ) : (
-                <div className="w-full h-28 bg-gradient-to-br from-secondary/20 to-primary/15" />
+                <div className="w-full h-28 bg-surface-container-high" />
             )}
             <div className="p-3">
-                <p className="text-sm font-semibold text-primary">{draft.name || "Nama Kelompok"}</p>
+                <p className="text-sm font-semibold text-primary">
+                    {draft.name || "Nama Kelompok"}
+                </p>
                 <p className="text-xs text-on-surface/50 mt-1 line-clamp-3">
                     {draft.description || "Deskripsi kartu rectangular."}
                 </p>
@@ -601,43 +1184,81 @@ function MappingRowEditor({
     busy,
     cardOptions,
     onSave,
-    onDelete,
+    onRequestDelete,
 }: {
     initial: SubjectMapping;
     busy: boolean;
     cardOptions: { value: string; label: string }[];
     onSave: (row: SubjectMapping) => Promise<void>;
-    onDelete: (id: string) => Promise<void>;
+    onRequestDelete: (row: SubjectMapping) => void;
 }) {
     const [draft, setDraft] = useState(initial);
+    const [errors, setErrors] = useState<{ subjectLabel?: string }>({});
 
     useEffect(() => {
         setDraft(initial);
+        setErrors({});
     }, [initial]);
 
+    const resolvedSubjectKey = normalizeSubjectKey(draft.subjectLabel);
+
+    const handleSave = async () => {
+        const subjectLabel = draft.subjectLabel.trim();
+
+        if (!subjectLabel) {
+            setErrors({ subjectLabel: "Nama mata kuliah wajib diisi" });
+            return;
+        }
+
+        if (subjectLabel.length > 120) {
+            setErrors({ subjectLabel: "Nama mata kuliah maksimal 120 karakter" });
+            return;
+        }
+
+        setErrors({});
+
+        await onSave({
+            ...draft,
+            subjectLabel,
+            subjectKey: resolvedSubjectKey,
+        });
+    };
+
     return (
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end rounded-md border border-outline-variant/20 p-3 bg-surface-container-low">
-            <div className="md:col-span-5">
+        <Card className="bg-surface-container-low p-4 space-y-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="data">{draft.kelompokCode}</Badge>
+                    <span className="text-xs text-on-surface/50 font-mono">
+                        {resolvedSubjectKey || "SUBJECT_KEY"}
+                    </span>
+                </div>
+                {busy && (
+                    <span className="text-xs text-on-surface/50">Menyimpan perubahan...</span>
+                )}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto] gap-3 items-end">
                 <Input
                     id={`subject-${draft.id}`}
                     label="MATA KULIAH"
                     value={draft.subjectLabel}
-                    onChange={(e) => setDraft((prev) => ({ ...prev, subjectLabel: e.target.value }))}
+                    error={errors.subjectLabel}
+                    disabled={busy}
+                    onChange={(e) => {
+                        setErrors({});
+                        setDraft((prev) => ({
+                            ...prev,
+                            subjectLabel: e.target.value,
+                        }));
+                    }}
                 />
-            </div>
-            <div className="md:col-span-3">
-                <Input
-                    id={`subject-key-${draft.id}`}
-                    label="SUBJECT KEY"
-                    value={draft.subjectKey}
-                    disabled
-                />
-            </div>
-            <div className="md:col-span-2">
+
                 <Select
                     id={`kelompok-${draft.id}`}
                     label="KELOMPOK"
                     value={draft.kelompokCode}
+                    disabled={busy}
                     onChange={(e) =>
                         setDraft((prev) => ({
                             ...prev,
@@ -646,27 +1267,36 @@ function MappingRowEditor({
                     }
                     options={cardOptions}
                 />
+
+                <div className="flex gap-2 w-full lg:w-auto">
+                    <Button className="flex-1" disabled={busy} onClick={handleSave}>
+                        Simpan
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        className="text-red-700 hover:text-red-800"
+                        disabled={busy}
+                        onClick={() => onRequestDelete(draft)}
+                    >
+                        Hapus
+                    </Button>
+                </div>
             </div>
-            <div className="md:col-span-2 flex gap-2">
-                <Button className="flex-1" disabled={busy} onClick={() => onSave(draft)}>
-                    {busy ? "..." : "Simpan"}
-                </Button>
-                <Button
-                    variant="secondary"
-                    className="text-red-700 hover:text-red-800"
-                    disabled={busy}
-                    onClick={() => onDelete(draft.id)}
-                >
-                    Hapus
-                </Button>
-            </div>
-        </div>
+        </Card>
     );
 }
 
 function DriveIcon({ className }: { className?: string }) {
     return (
-        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+            className={className}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        >
             <rect x="3" y="4" width="18" height="14" rx="2" />
             <path d="M3 10h18" />
         </svg>

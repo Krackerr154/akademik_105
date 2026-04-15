@@ -17,6 +17,7 @@ const ADMIN_ITEMS = [
     { href: "/admin/users", label: "Pengguna", icon: UserCogIcon, exact: false },
     { href: "/admin/drives", label: "Drive", icon: HardDriveIcon, exact: false },
     { href: "/admin/audit", label: "Audit Log", icon: ClipboardIcon, exact: false },
+    { href: "/admin/kelompok", label: "Kelompok", icon: LayersIcon, exact: false },
     { href: "/admin/types", label: "Tipe Dokumen", icon: TagIcon, exact: false },
     { href: "/admin/settings", label: "Pengaturan", icon: SettingsIcon, exact: false },
 ] as const;
@@ -225,6 +226,16 @@ function TagIcon({ className }: { className?: string }) {
         <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20.59 13.41L11 3.83A2 2 0 0 0 9.59 3H4a1 1 0 0 0-1 1v5.59A2 2 0 0 0 3.83 11l9.58 9.59a2 2 0 0 0 2.83 0l4.35-4.35a2 2 0 0 0 0-2.83z" />
             <circle cx="7.5" cy="7.5" r="1.5" />
+        </svg>
+    );
+}
+
+function LayersIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="12 2 2 7 12 12 22 7 12 2" />
+            <polyline points="2 17 12 22 22 17" />
+            <polyline points="2 12 12 17 22 12" />
         </svg>
     );
 }

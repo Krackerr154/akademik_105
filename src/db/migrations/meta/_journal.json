@@ -15,6 +15,13 @@
       "when": 1776167000000,
       "tag": "0001_doc_type_taxonomy",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1776200000000,
+      "tag": "0002_kelompok_cards",
+      "breakpoints": true
     }
   ]
 }

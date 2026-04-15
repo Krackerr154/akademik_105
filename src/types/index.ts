@@ -177,6 +177,111 @@ export const DEFAULT_DOCUMENT_TYPE_OPTIONS: DocumentTypeOption[] =
         sortOrder: idx,
     }));
 
+// ─── Kelompok Keilmuan Cards ──────────────────────────────────────────
+
+export const KELOMPOK_CARD_STYLE = {
+    RECT: "rect",
+    DRIVE: "drive",
+} as const;
+
+export type KelompokCardStyle =
+    (typeof KELOMPOK_CARD_STYLE)[keyof typeof KELOMPOK_CARD_STYLE];
+
+export interface KelompokCardOption {
+    id?: string;
+    code: string;
+    name: string;
+    description?: string | null;
+    photoUrl?: string | null;
+    cardStyle?: KelompokCardStyle;
+    isSystem?: boolean;
+    isActive?: boolean;
+    sortOrder?: number;
+}
+
+export const DEFAULT_KELOMPOK_CARD_OPTIONS: KelompokCardOption[] = [
+    {
+        code: "KIMIA_UMUM",
+        name: "Kimia Umum",
+        description: "Fondasi konsep dan prinsip kimia dasar.",
+        cardStyle: KELOMPOK_CARD_STYLE.RECT,
+        isSystem: true,
+        isActive: true,
+        sortOrder: 0,
+    },
+    {
+        code: "KIMIA_ANALITIK",
+        name: "Kimia Analitik",
+        description: "Analisis kualitatif dan kuantitatif senyawa kimia.",
+        cardStyle: KELOMPOK_CARD_STYLE.RECT,
+        isSystem: true,
+        isActive: true,
+        sortOrder: 1,
+    },
+    {
+        code: "KIMIA_ANORGANIK",
+        name: "Kimia Anorganik",
+        description: "Struktur, reaktivitas, dan aplikasi senyawa anorganik.",
+        cardStyle: KELOMPOK_CARD_STYLE.RECT,
+        isSystem: true,
+        isActive: true,
+        sortOrder: 2,
+    },
+    {
+        code: "KIMIA_FISIK",
+        name: "Kimia Fisik",
+        description: "Fenomena kimia melalui pendekatan fisika dan matematika.",
+        cardStyle: KELOMPOK_CARD_STYLE.RECT,
+        isSystem: true,
+        isActive: true,
+        sortOrder: 3,
+    },
+    {
+        code: "KIMIA_ORGANIK",
+        name: "Kimia Organik",
+        description: "Senyawa karbon, mekanisme reaksi, dan sintesis organik.",
+        cardStyle: KELOMPOK_CARD_STYLE.RECT,
+        isSystem: true,
+        isActive: true,
+        sortOrder: 4,
+    },
+    {
+        code: "BIOKIMIA",
+        name: "Biokimia",
+        description: "Kajian molekul hayati dan proses biokimia dalam sel.",
+        cardStyle: KELOMPOK_CARD_STYLE.RECT,
+        isSystem: true,
+        isActive: true,
+        sortOrder: 5,
+    },
+    {
+        code: "MATA_KULIAH_NON_KI",
+        name: "Mata Kuliah Non KI",
+        description: "Mata kuliah pelengkap di luar kelompok keilmuan inti.",
+        cardStyle: KELOMPOK_CARD_STYLE.DRIVE,
+        isSystem: true,
+        isActive: true,
+        sortOrder: 6,
+    },
+    {
+        code: "SOFTWARE",
+        name: "Software",
+        description: "Perangkat lunak, panduan, dan resource pendukung.",
+        cardStyle: KELOMPOK_CARD_STYLE.DRIVE,
+        isSystem: true,
+        isActive: true,
+        sortOrder: 7,
+    },
+];
+
+export function normalizeKelompokCode(input: string): string {
+    return input.trim().replace(/\s+/g, " ").toUpperCase().replace(/[^A-Z0-9 ]/g, "").replace(/ /g, "_");
+}
+
+export function normalizeSubjectKey(input: string): string {
+    return input.trim().replace(/\s+/g, " ").toUpperCase();
+}
+
 // ─── Audit Actions ─────────────────────────────────────────────────────
 
 export const AUDIT_ACTIONS = {

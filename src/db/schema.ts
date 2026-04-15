@@ -78,6 +78,35 @@ export const documentTypes = sqliteTable("document_types", {
     updatedAt: integer("updated_at").notNull(),
 });
 
+// ─── Kelompok Cards ───────────────────────────────────────────────────
+// Dashboard categories for browse page (6 KK + 2 special cards).
+export const kelompokCards = sqliteTable("kelompok_cards", {
+    id: text("id").primaryKey(),
+    code: text("code").notNull().unique(),
+    name: text("name").notNull(),
+    description: text("description"),
+    photoUrl: text("photo_url"),
+    cardStyle: text("card_style").notNull().default("rect"), // 'rect' | 'drive'
+    isSystem: integer("is_system").notNull().default(0),
+    isActive: integer("is_active").notNull().default(1),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdBy: text("created_by"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+});
+
+// ─── Subject to Kelompok Mapping ──────────────────────────────────────
+// Normalized subject key mapped to one dashboard category.
+export const subjectKelompokMappings = sqliteTable("subject_kelompok_mappings", {
+    id: text("id").primaryKey(),
+    subjectKey: text("subject_key").notNull().unique(),
+    subjectLabel: text("subject_label").notNull(),
+    kelompokCode: text("kelompok_code").notNull(),
+    createdBy: text("created_by"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+});
+
 // ─── Drive Usage ───────────────────────────────────────────────────────
 // Cached drive usage for load balancing
 export const driveUsage = sqliteTable("drive_usage", {

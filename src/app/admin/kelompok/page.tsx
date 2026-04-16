@@ -1,15 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input, Select, Textarea } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
-import { cn } from "@/lib/utils";
+import { cn, formatBytes } from "@/lib/utils";
 import {
+    KELOMPOK_PHOTO_ALLOWED_MIME_TYPES,
     KELOMPOK_CARD_STYLE,
+    MAX_KELOMPOK_PHOTO_SIZE,
     normalizeKelompokCode,
     normalizeSubjectKey,
 } from "@/types";
@@ -58,7 +60,47 @@ type UnmappedSubject = {
     subjectLabel: string;
 };
 
+type UploadInitResponse = {
+    driveId?: string;
+    uploadUri?: string;
+    storedFileName?: string;
+    error?: string;
+};
+
+type UploadCompleteResponse = {
+    photoUrl?: string;
+    error?: string;
+};
+
+function isValidInternalPhotoUrl(raw: string): boolean {
+    if (!raw.startsWith("/api/kelompok/photo?")) {
+        return false;
+    }
+
+    try {
+        const parsed = new URL(raw, "https://internal.local");
+        if (parsed.pathname !== "/api/kelompok/photo") {
+            return false;
+        }
+
+        const driveId = (parsed.searchParams.get("driveId") ?? "").trim();
+        const fileId = (parsed.searchParams.get("fileId") ?? "").trim();
+
+        if (driveId !== "A" && driveId !== "B") {
+            return false;
+        }
+
+        return fileId.length > 0;
+    } catch {
+        return false;
+    }
+}
+
 function isValidPhotoUrl(raw: string): boolean {
+    if (isValidInternalPhotoUrl(raw)) {
+        return true;
+    }
+
     try {
         const url = new URL(raw);
         return url.protocol === "https:" || url.protocol === "http:";
@@ -68,6 +110,34 @@ function isValidPhotoUrl(raw: string): boolean {
 }
 
 const REQUEST_TIMEOUT_MS = 15000;
+const PHOTO_UPLOAD_TIMEOUT_MS = 120000;
+
+async function parseJsonResponse<T>(res: Response): Promise<T | null> {
+    const raw = await res.text();
+    if (!raw || raw.trim().length === 0) {
+        return null;
+    }
+
+    try {
+        return JSON.parse(raw) as T;
+    } catch {
+        throw new Error(`Respons tidak valid dari server (${res.status}).`);
+    }
+}
+
+function validatePhotoFile(file: File): string | null {
+    if (!(KELOMPOK_PHOTO_ALLOWED_MIME_TYPES as readonly string[]).includes(file.type)) {
+        return `Tipe foto tidak didukung: ${file.type}`;
+    }
+
+    if (file.size > MAX_KELOMPOK_PHOTO_SIZE) {
+        return `Ukuran foto terlalu besar (${formatBytes(file.size)}). Maksimum ${formatBytes(
+            MAX_KELOMPOK_PHOTO_SIZE
+        )}.`;
+    }
+
+    return null;
+}
 
 async function fetchWithTimeout(
     input: RequestInfo | URL,
@@ -89,6 +159,97 @@ async function fetchWithTimeout(
     } finally {
         clearTimeout(timer);
     }
+}
+
+async function uploadKelompokPhotoFile(
+    file: File,
+    setProgress?: (progress: number) => void
+): Promise<string> {
+    const validationError = validatePhotoFile(file);
+    if (validationError) {
+        throw new Error(validationError);
+    }
+
+    const uploadStartedAt = Date.now();
+    setProgress?.(10);
+
+    const initRes = await fetchWithTimeout(
+        "/api/admin/kelompok/photo/init",
+        {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                fileName: file.name,
+                mimeType: file.type,
+                fileSize: file.size,
+            }),
+        },
+        REQUEST_TIMEOUT_MS
+    );
+
+    const initData = await parseJsonResponse<UploadInitResponse>(initRes);
+    if (!initRes.ok) {
+        throw new Error(
+            initData?.error ?? `Gagal menginisialisasi upload foto (${initRes.status})`
+        );
+    }
+
+    if (!initData?.driveId || !initData.uploadUri || !initData.storedFileName) {
+        throw new Error("Respons inisialisasi upload foto tidak lengkap");
+    }
+
+    setProgress?.(35);
+
+    const uploadRes = await fetchWithTimeout(
+        initData.uploadUri,
+        {
+            method: "PUT",
+            headers: { "Content-Type": file.type },
+            body: file,
+        },
+        PHOTO_UPLOAD_TIMEOUT_MS
+    );
+
+    if (!uploadRes.ok) {
+        throw new Error(`Upload foto gagal (${uploadRes.status})`);
+    }
+
+    const driveData = await parseJsonResponse<{ id?: string }>(uploadRes);
+    const gdriveFileId =
+        driveData && typeof driveData.id === "string" ? driveData.id : null;
+
+    setProgress?.(75);
+
+    const completeRes = await fetchWithTimeout(
+        "/api/admin/kelompok/photo/complete",
+        {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                driveId: initData.driveId,
+                gdriveFileId,
+                fileName: initData.storedFileName,
+                uploadStartedAt,
+                mimeType: file.type,
+                sizeBytes: file.size,
+            }),
+        },
+        REQUEST_TIMEOUT_MS
+    );
+
+    const completeData = await parseJsonResponse<UploadCompleteResponse>(completeRes);
+    if (!completeRes.ok) {
+        throw new Error(
+            completeData?.error ?? `Gagal menyelesaikan upload foto (${completeRes.status})`
+        );
+    }
+
+    if (!completeData?.photoUrl) {
+        throw new Error("URL foto hasil upload tidak tersedia");
+    }
+
+    setProgress?.(100);
+    return completeData.photoUrl;
 }
 
 export default function AdminKelompokPage() {
@@ -114,6 +275,8 @@ export default function AdminKelompokPage() {
     const [newCardDescription, setNewCardDescription] = useState("");
     const [newCardPhotoUrl, setNewCardPhotoUrl] = useState("");
     const [newCardStyle, setNewCardStyle] = useState<"rect" | "drive">("rect");
+    const [newCardPhotoUploading, setNewCardPhotoUploading] = useState(false);
+    const [newCardPhotoUploadProgress, setNewCardPhotoUploadProgress] = useState(0);
     const [createCardErrors, setCreateCardErrors] = useState<CardFormErrors>({});
     const [createCardSubmitError, setCreateCardSubmitError] = useState<string | null>(
         null
@@ -338,6 +501,8 @@ export default function AdminKelompokPage() {
         setNewCardDescription("");
         setNewCardPhotoUrl("");
         setNewCardStyle("rect");
+        setNewCardPhotoUploading(false);
+        setNewCardPhotoUploadProgress(0);
         setCreateCardErrors({});
         setCreateCardSubmitError(null);
     }, []);
@@ -380,12 +545,51 @@ export default function AdminKelompokPage() {
         setIsCreateMappingModalOpen(false);
     }, []);
 
+    const handleCreateCardPhotoFileChange = async (
+        event: ChangeEvent<HTMLInputElement>
+    ) => {
+        const file = event.target.files?.[0] ?? null;
+        event.target.value = "";
+
+        if (!file) {
+            return;
+        }
+
+        setCreateCardErrors((prev) => ({ ...prev, photoUrl: undefined }));
+        setCreateCardSubmitError(null);
+        setNewCardPhotoUploadProgress(0);
+        setNewCardPhotoUploading(true);
+
+        try {
+            const uploadedPhotoUrl = await uploadKelompokPhotoFile(
+                file,
+                setNewCardPhotoUploadProgress
+            );
+            setNewCardPhotoUrl(uploadedPhotoUrl);
+        } catch (err) {
+            const message =
+                err instanceof Error ? err.message : "Gagal mengunggah foto";
+            setCreateCardErrors((prev) => ({ ...prev, photoUrl: message }));
+            setCreateCardSubmitError(message);
+        } finally {
+            setNewCardPhotoUploading(false);
+        }
+    };
+
     const handleCreateCard = async () => {
         const normalizedCode = normalizeKelompokCode(newCardCode || newCardName);
         const name = newCardName.trim();
         const description = newCardDescription.trim();
         const photoUrl = newCardPhotoUrl.trim();
         setCreateCardSubmitError(null);
+
+        if (newCardPhotoUploading) {
+            setStatusMessage({
+                type: "error",
+                text: "Tunggu sampai upload foto selesai sebelum menyimpan kartu.",
+            });
+            return;
+        }
 
         const errors: CardFormErrors = {};
         if (!normalizedCode) errors.code = "Kode kelompok wajib diisi";
@@ -433,6 +637,7 @@ export default function AdminKelompokPage() {
             setNewCardDescription("");
             setNewCardPhotoUrl("");
             setNewCardStyle("rect");
+            setNewCardPhotoUploadProgress(0);
             setCreateCardErrors({});
             setCreateCardSubmitError(null);
             setIsCreateCardModalOpen(false);
@@ -939,11 +1144,11 @@ export default function AdminKelompokPage() {
                     />
                     <Input
                         id="new-card-photo-url"
-                        label="PHOTO URL"
-                        placeholder="https://..."
+                        label="PHOTO URL (OPSIONAL)"
+                        placeholder="https://... atau /api/kelompok/photo?..."
                         value={newCardPhotoUrl}
                         error={createCardErrors.photoUrl}
-                        disabled={busyId === "new-card"}
+                        disabled={busyId === "new-card" || newCardPhotoUploading}
                         onChange={(e) => {
                             setCreateCardErrors((prev) => ({
                                 ...prev,
@@ -952,11 +1157,35 @@ export default function AdminKelompokPage() {
                             setNewCardPhotoUrl(e.target.value);
                         }}
                     />
+                    <div className="space-y-1.5">
+                        <label
+                            htmlFor="new-card-photo-file"
+                            className="text-[13px] font-medium text-on-surface/70 uppercase tracking-wide"
+                        >
+                            PHOTO FILE (OPSIONAL)
+                        </label>
+                        <input
+                            id="new-card-photo-file"
+                            type="file"
+                            accept={KELOMPOK_PHOTO_ALLOWED_MIME_TYPES.join(",")}
+                            disabled={busyId === "new-card" || newCardPhotoUploading}
+                            className="w-full text-sm file:mr-3 file:px-3 file:py-2 file:rounded-md file:border-0 file:bg-surface-container-high file:text-on-surface hover:file:bg-surface-container"
+                            onChange={handleCreateCardPhotoFileChange}
+                        />
+                        <p className="text-xs text-on-surface/55">
+                            Tipe: PNG, JPG, WEBP. Maksimal {formatBytes(MAX_KELOMPOK_PHOTO_SIZE)}.
+                        </p>
+                        {newCardPhotoUploading && (
+                            <p className="text-xs text-on-surface/65">
+                                Mengunggah foto... {newCardPhotoUploadProgress}%
+                            </p>
+                        )}
+                    </div>
                     <Select
                         id="new-card-style"
                         label="GAYA KARTU"
                         value={newCardStyle}
-                        disabled={busyId === "new-card"}
+                        disabled={busyId === "new-card" || newCardPhotoUploading}
                         onChange={(e) =>
                             setNewCardStyle(
                                 (e.target as HTMLSelectElement).value as "rect" | "drive"
@@ -972,15 +1201,19 @@ export default function AdminKelompokPage() {
                         <Button
                             variant="ghost"
                             onClick={closeCreateCardModal}
-                            disabled={busyId === "new-card"}
+                            disabled={busyId === "new-card" || newCardPhotoUploading}
                         >
                             Batal
                         </Button>
                         <Button
                             onClick={handleCreateCard}
-                            disabled={busyId === "new-card"}
+                            disabled={busyId === "new-card" || newCardPhotoUploading}
                         >
-                            {busyId === "new-card" ? "Menyimpan..." : "Tambah Kartu"}
+                            {busyId === "new-card"
+                                ? "Menyimpan..."
+                                : newCardPhotoUploading
+                                  ? "Mengunggah foto..."
+                                  : "Tambah Kartu"}
                         </Button>
                     </div>
                 </div>
@@ -1137,14 +1370,52 @@ function KelompokCardEditor({
         photoUrl?: string;
         sortOrder?: string;
     }>({});
+    const [photoUploadBusy, setPhotoUploadBusy] = useState(false);
+    const [photoUploadProgress, setPhotoUploadProgress] = useState(0);
+    const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
     const [confirmArchiveOpen, setConfirmArchiveOpen] = useState(false);
 
     useEffect(() => {
         setDraft(initial);
         setErrors({});
+        setPhotoUploadBusy(false);
+        setPhotoUploadProgress(0);
+        setPhotoUploadError(null);
     }, [initial]);
 
+    const handlePhotoFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0] ?? null;
+        event.target.value = "";
+
+        if (!file) {
+            return;
+        }
+
+        setErrors((prev) => ({ ...prev, photoUrl: undefined }));
+        setPhotoUploadError(null);
+        setPhotoUploadProgress(0);
+        setPhotoUploadBusy(true);
+
+        try {
+            const uploadedPhotoUrl = await uploadKelompokPhotoFile(
+                file,
+                setPhotoUploadProgress
+            );
+            setDraft((prev) => ({ ...prev, photoUrl: uploadedPhotoUrl }));
+        } catch (err) {
+            setPhotoUploadError(
+                err instanceof Error ? err.message : "Gagal mengunggah foto"
+            );
+        } finally {
+            setPhotoUploadBusy(false);
+        }
+    };
+
     const handleSave = async () => {
+        if (photoUploadBusy) {
+            return;
+        }
+
         const name = draft.name.trim();
         const description = (draft.description ?? "").trim();
         const photoUrl = (draft.photoUrl ?? "").trim();
@@ -1187,7 +1458,7 @@ function KelompokCardEditor({
     };
 
     const handleToggleActive = () => {
-        if (busy || draft.isSystem) return;
+        if (busy || photoUploadBusy || draft.isSystem) return;
 
         if (draft.isActive) {
             setConfirmArchiveOpen(true);
@@ -1215,7 +1486,7 @@ function KelompokCardEditor({
                     className={cn(
                         draft.isActive && "text-red-700 hover:text-red-800"
                     )}
-                    disabled={busy || draft.isSystem}
+                    disabled={busy || photoUploadBusy || draft.isSystem}
                     title={
                         draft.isSystem
                             ? "Kartu sistem tidak dapat diarsipkan"
@@ -1258,10 +1529,10 @@ function KelompokCardEditor({
 
                     <Input
                         id={`photo-${draft.id}`}
-                        label="PHOTO URL"
-                        placeholder="https://..."
+                        label="PHOTO URL (OPSIONAL)"
+                        placeholder="https://... atau /api/kelompok/photo?..."
                         value={draft.photoUrl ?? ""}
-                        disabled={busy}
+                        disabled={busy || photoUploadBusy}
                         error={errors.photoUrl}
                         onChange={(e) => {
                             setErrors((prev) => ({ ...prev, photoUrl: undefined }));
@@ -1269,12 +1540,40 @@ function KelompokCardEditor({
                         }}
                     />
 
+                    <div className="space-y-1.5">
+                        <label
+                            htmlFor={`photo-file-${draft.id}`}
+                            className="text-[13px] font-medium text-on-surface/70 uppercase tracking-wide"
+                        >
+                            PHOTO FILE (OPSIONAL)
+                        </label>
+                        <input
+                            id={`photo-file-${draft.id}`}
+                            type="file"
+                            accept={KELOMPOK_PHOTO_ALLOWED_MIME_TYPES.join(",")}
+                            disabled={busy || photoUploadBusy}
+                            className="w-full text-sm file:mr-3 file:px-3 file:py-2 file:rounded-md file:border-0 file:bg-surface-container-high file:text-on-surface hover:file:bg-surface-container"
+                            onChange={handlePhotoFileChange}
+                        />
+                        <p className="text-xs text-on-surface/55">
+                            Tipe: PNG, JPG, WEBP. Maksimal {formatBytes(MAX_KELOMPOK_PHOTO_SIZE)}.
+                        </p>
+                        {photoUploadBusy && (
+                            <p className="text-xs text-on-surface/65">
+                                Mengunggah foto... {photoUploadProgress}%
+                            </p>
+                        )}
+                        {photoUploadError && (
+                            <p className="text-xs text-red-600">{photoUploadError}</p>
+                        )}
+                    </div>
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <Select
                             id={`style-${draft.id}`}
                             label="GAYA"
                             value={draft.cardStyle}
-                            disabled={busy}
+                            disabled={busy || photoUploadBusy}
                             onChange={(e) =>
                                 setDraft((prev) => ({
                                     ...prev,
@@ -1293,7 +1592,7 @@ function KelompokCardEditor({
                             label="URUTAN"
                             type="number"
                             value={String(draft.sortOrder)}
-                            disabled={busy}
+                            disabled={busy || photoUploadBusy}
                             error={errors.sortOrder}
                             onChange={(e) => {
                                 setErrors((prev) => ({ ...prev, sortOrder: undefined }));
@@ -1313,8 +1612,12 @@ function KelompokCardEditor({
             </div>
 
             <div className="flex justify-end">
-                <Button disabled={busy} onClick={handleSave}>
-                    {busy ? "Menyimpan..." : "Simpan"}
+                <Button disabled={busy || photoUploadBusy} onClick={handleSave}>
+                    {busy
+                        ? "Menyimpan..."
+                        : photoUploadBusy
+                          ? "Mengunggah foto..."
+                          : "Simpan"}
                 </Button>
             </div>
 

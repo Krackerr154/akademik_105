@@ -13,7 +13,35 @@ function ensureAdmin(user: { role?: string; status?: string }) {
     return user.status === "active" && hasMinRole(user.role ?? "", "admin");
 }
 
+function isValidInternalPhotoUrl(raw: string): boolean {
+    if (!raw.startsWith("/api/kelompok/photo?")) {
+        return false;
+    }
+
+    try {
+        const parsed = new URL(raw, "https://internal.local");
+        if (parsed.pathname !== "/api/kelompok/photo") {
+            return false;
+        }
+
+        const driveId = (parsed.searchParams.get("driveId") ?? "").trim();
+        const fileId = (parsed.searchParams.get("fileId") ?? "").trim();
+
+        if (driveId !== "A" && driveId !== "B") {
+            return false;
+        }
+
+        return fileId.length > 0;
+    } catch {
+        return false;
+    }
+}
+
 function isValidPhotoUrl(raw: string): boolean {
+    if (isValidInternalPhotoUrl(raw)) {
+        return true;
+    }
+
     try {
         const url = new URL(raw);
         return url.protocol === "https:" || url.protocol === "http:";

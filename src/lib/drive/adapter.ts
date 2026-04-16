@@ -145,6 +145,73 @@ export class GoogleDriveAdapter {
         }
     }
 
+    /** Fetch raw file bytes (alt=media) for internal proxy routes. */
+    async getFileMedia(
+        driveId: DriveAccountId,
+        gdriveFileId: string
+    ): Promise<{ bytes: Uint8Array; mimeType: string; updatedTime?: string } | null> {
+        try {
+            const drive = this.getDriveClient(driveId);
+
+            const [metaResponse, mediaResponse] = await Promise.all([
+                drive.files.get({
+                    fileId: gdriveFileId,
+                    fields: "mimeType,modifiedTime",
+                    supportsAllDrives: true,
+                }),
+                drive.files.get(
+                    {
+                        fileId: gdriveFileId,
+                        alt: "media",
+                        supportsAllDrives: true,
+                    },
+                    {
+                        responseType: "arraybuffer",
+                    }
+                ),
+            ]);
+
+            const mimeType =
+                typeof metaResponse.data.mimeType === "string"
+                    ? metaResponse.data.mimeType
+                    : "application/octet-stream";
+
+            const payload = mediaResponse.data as unknown;
+            let bytes: Uint8Array | null = null;
+
+            if (payload instanceof Uint8Array) {
+                bytes = payload;
+            } else if (payload instanceof ArrayBuffer) {
+                bytes = new Uint8Array(payload);
+            } else if (ArrayBuffer.isView(payload)) {
+                bytes = new Uint8Array(
+                    payload.buffer,
+                    payload.byteOffset,
+                    payload.byteLength
+                );
+            }
+
+            if (!bytes) {
+                throw new Error("Unsupported media payload from Drive API");
+            }
+
+            return {
+                bytes,
+                mimeType,
+                updatedTime:
+                    typeof metaResponse.data.modifiedTime === "string"
+                        ? metaResponse.data.modifiedTime
+                        : undefined,
+            };
+        } catch (err) {
+            console.error(
+                `[DriveAdapter] Failed to fetch media for file ${gdriveFileId} from Drive ${driveId}:`,
+                err
+            );
+            return null;
+        }
+    }
+
     /**
      * Resolve a recently uploaded file ID when resumable upload responses do not
      * include metadata JSON in the browser response body.

@@ -52,7 +52,9 @@ export async function GET(req: NextRequest) {
         headers.set("Last-Modified", lastModified);
     }
 
-    return new NextResponse(media.bytes, {
+    const body = new Uint8Array(media.bytes).buffer;
+
+    return new NextResponse(body, {
         status: 200,
         headers,
     });

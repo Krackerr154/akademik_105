@@ -114,27 +114,30 @@ export default function MemberPage() {
                             <button
                                 key={card.code}
                                 onClick={() => router.push(`/folder/${card.code}`)}
-                                className="group text-left p-3 rounded-md border border-outline-variant/20 bg-surface-container-low hover:bg-surface-container-high transition-colors"
+                                className="group text-left rounded-xl overflow-hidden border border-outline-variant/20 bg-surface-container-low hover:bg-surface-container-high transition-colors"
                             >
-                                <div className="flex items-center gap-3">
+                                <div className="relative w-full aspect-[4/3] bg-surface-container-high">
                                     {card.photoUrl ? (
                                         // eslint-disable-next-line @next/next/no-img-element
                                         <img
                                             src={card.photoUrl}
                                             alt={card.name}
-                                            className="w-12 h-12 rounded-md object-cover"
+                                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                                         />
                                     ) : (
-                                        <div className="w-12 h-12 rounded-md bg-surface-container-high" />
+                                        <div className="h-full w-full bg-gradient-to-br from-secondary/25 to-primary/15" />
                                     )}
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-[11px] uppercase tracking-wide text-on-surface/60 font-mono">
-                                            {card.code}
-                                        </p>
-                                        <h3 className="text-sm font-semibold text-primary line-clamp-2">
-                                            {card.name}
-                                        </h3>
-                                    </div>
+                                </div>
+                                <div className="p-4">
+                                    <p className="text-[11px] uppercase tracking-wide text-on-surface/60 font-mono mb-1">
+                                        {card.code}
+                                    </p>
+                                    <h3 className="text-sm font-semibold text-primary line-clamp-2 mb-1">
+                                        {card.name}
+                                    </h3>
+                                    <p className="text-xs text-on-surface/60 line-clamp-2">
+                                        {card.description || "Kelompok keilmuan utama."}
+                                    </p>
                                 </div>
                             </button>
                         ))}

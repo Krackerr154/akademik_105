@@ -67,6 +67,30 @@ function isValidPhotoUrl(raw: string): boolean {
     }
 }
 
+const REQUEST_TIMEOUT_MS = 15000;
+
+async function fetchWithTimeout(
+    input: RequestInfo | URL,
+    init?: RequestInit,
+    timeoutMs = REQUEST_TIMEOUT_MS
+) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+        return await fetch(input, { ...init, signal: controller.signal });
+    } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") {
+            throw new Error(
+                "Permintaan terlalu lama diproses. Silakan coba lagi."
+            );
+        }
+        throw err;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
 export default function AdminKelompokPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -91,6 +115,9 @@ export default function AdminKelompokPage() {
     const [newCardPhotoUrl, setNewCardPhotoUrl] = useState("");
     const [newCardStyle, setNewCardStyle] = useState<"rect" | "drive">("rect");
     const [createCardErrors, setCreateCardErrors] = useState<CardFormErrors>({});
+    const [createCardSubmitError, setCreateCardSubmitError] = useState<string | null>(
+        null
+    );
     const [isCreateCardModalOpen, setIsCreateCardModalOpen] = useState(false);
 
     const [newSubjectLabel, setNewSubjectLabel] = useState("");
@@ -98,6 +125,9 @@ export default function AdminKelompokPage() {
     const [mappingQuery, setMappingQuery] = useState("");
     const [createMappingErrors, setCreateMappingErrors] =
         useState<MappingFormErrors>({});
+    const [createMappingSubmitError, setCreateMappingSubmitError] = useState<
+        string | null
+    >(null);
     const [isCreateMappingModalOpen, setIsCreateMappingModalOpen] = useState(false);
     const [pendingDeleteMapping, setPendingDeleteMapping] =
         useState<SubjectMapping | null>(null);
@@ -128,8 +158,8 @@ export default function AdminKelompokPage() {
 
         try {
             const [cardsRes, mappingsRes] = await Promise.all([
-                fetch("/api/admin/kelompok"),
-                fetch("/api/admin/kelompok/mappings"),
+                fetchWithTimeout("/api/admin/kelompok"),
+                fetchWithTimeout("/api/admin/kelompok/mappings"),
             ]);
 
             if (!cardsRes.ok) {
@@ -309,6 +339,7 @@ export default function AdminKelompokPage() {
         setNewCardPhotoUrl("");
         setNewCardStyle("rect");
         setCreateCardErrors({});
+        setCreateCardSubmitError(null);
     }, []);
 
     const openCreateCardModal = useCallback(() => {
@@ -318,13 +349,13 @@ export default function AdminKelompokPage() {
     }, [resetCreateCardForm]);
 
     const closeCreateCardModal = useCallback(() => {
-        if (busyId === "new-card") return;
         setIsCreateCardModalOpen(false);
-    }, [busyId]);
+    }, []);
 
     const resetCreateMappingForm = useCallback(() => {
         setNewSubjectLabel("");
         setCreateMappingErrors({});
+        setCreateMappingSubmitError(null);
     }, []);
 
     const openCreateMappingModal = useCallback(
@@ -346,15 +377,15 @@ export default function AdminKelompokPage() {
     );
 
     const closeCreateMappingModal = useCallback(() => {
-        if (busyId === "new-mapping") return;
         setIsCreateMappingModalOpen(false);
-    }, [busyId]);
+    }, []);
 
     const handleCreateCard = async () => {
         const normalizedCode = normalizeKelompokCode(newCardCode || newCardName);
         const name = newCardName.trim();
         const description = newCardDescription.trim();
         const photoUrl = newCardPhotoUrl.trim();
+        setCreateCardSubmitError(null);
 
         const errors: CardFormErrors = {};
         if (!normalizedCode) errors.code = "Kode kelompok wajib diisi";
@@ -380,7 +411,7 @@ export default function AdminKelompokPage() {
         setStatusMessage(null);
 
         try {
-            const res = await fetch("/api/admin/kelompok", {
+            const res = await fetchWithTimeout("/api/admin/kelompok", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -403,6 +434,7 @@ export default function AdminKelompokPage() {
             setNewCardPhotoUrl("");
             setNewCardStyle("rect");
             setCreateCardErrors({});
+            setCreateCardSubmitError(null);
             setIsCreateCardModalOpen(false);
             setStatusMessage({
                 type: "success",
@@ -410,6 +442,9 @@ export default function AdminKelompokPage() {
             });
             await fetchAll();
         } catch (err) {
+            setCreateCardSubmitError(
+                err instanceof Error ? err.message : "Terjadi kesalahan"
+            );
             setStatusMessage({
                 type: "error",
                 text: err instanceof Error ? err.message : "Terjadi kesalahan",
@@ -424,7 +459,7 @@ export default function AdminKelompokPage() {
         setStatusMessage(null);
 
         try {
-            const res = await fetch("/api/admin/kelompok", {
+            const res = await fetchWithTimeout("/api/admin/kelompok", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -461,6 +496,7 @@ export default function AdminKelompokPage() {
     const handleCreateMapping = async () => {
         const subjectLabel = newSubjectLabel.trim();
         const subjectKey = normalizeSubjectKey(subjectLabel);
+        setCreateMappingSubmitError(null);
 
         const errors: MappingFormErrors = {};
         if (!subjectLabel) {
@@ -489,7 +525,7 @@ export default function AdminKelompokPage() {
         setStatusMessage(null);
 
         try {
-            const res = await fetch("/api/admin/kelompok/mappings", {
+            const res = await fetchWithTimeout("/api/admin/kelompok/mappings", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -505,6 +541,7 @@ export default function AdminKelompokPage() {
 
             setNewSubjectLabel("");
             setCreateMappingErrors({});
+            setCreateMappingSubmitError(null);
             setIsCreateMappingModalOpen(false);
             setStatusMessage({
                 type: "success",
@@ -512,6 +549,9 @@ export default function AdminKelompokPage() {
             });
             await fetchAll();
         } catch (err) {
+            setCreateMappingSubmitError(
+                err instanceof Error ? err.message : "Terjadi kesalahan"
+            );
             setStatusMessage({
                 type: "error",
                 text: err instanceof Error ? err.message : "Terjadi kesalahan",
@@ -535,7 +575,7 @@ export default function AdminKelompokPage() {
         setStatusMessage(null);
 
         try {
-            const res = await fetch("/api/admin/kelompok/mappings", {
+            const res = await fetchWithTimeout("/api/admin/kelompok/mappings", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -572,7 +612,7 @@ export default function AdminKelompokPage() {
         setStatusMessage(null);
 
         try {
-            const res = await fetch("/api/admin/kelompok/mappings", {
+            const res = await fetchWithTimeout("/api/admin/kelompok/mappings", {
                 method: "DELETE",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ id: pendingDeleteMapping.id }),
@@ -847,6 +887,11 @@ export default function AdminKelompokPage() {
                 title="Tambah Kartu Kelompok"
             >
                 <div className="space-y-3">
+                    {createCardSubmitError && (
+                        <div className="rounded-md px-3 py-2 text-sm bg-red-100/70 text-red-700">
+                            {createCardSubmitError}
+                        </div>
+                    )}
                     <Input
                         id="new-card-code"
                         label="KODE"
@@ -947,6 +992,11 @@ export default function AdminKelompokPage() {
                 title="Tambah Mata Kuliah"
             >
                 <div className="space-y-3">
+                    {createMappingSubmitError && (
+                        <div className="rounded-md px-3 py-2 text-sm bg-red-100/70 text-red-700">
+                            {createMappingSubmitError}
+                        </div>
+                    )}
                     <Input
                         id="new-subject-label"
                         label="MATA KULIAH"

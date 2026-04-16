@@ -1,6 +1,6 @@
-import { normalizeSubjectKey } from "@/types";
+import { normalizeKelompokCode, normalizeSubjectKey } from "@/types";
 
-const FALLBACK_SUBJECT_RULES: Array<{ code: string; patterns: string[] }> = [
+export const FALLBACK_SUBJECT_RULES: Array<{ code: string; patterns: string[] }> = [
     { code: "KIMIA_UMUM", patterns: ["KIMIA UMUM", "KIX1X1"] },
     { code: "KIMIA_ANALITIK", patterns: ["KIMIA ANALITIK", "KIXX2X"] },
     { code: "KIMIA_ANORGANIK", patterns: ["KIMIA ANORGANIK", "KIXX3X"] },
@@ -22,6 +22,16 @@ export function inferKelompokCodeFromSubject(subject: string): string | null {
     }
 
     return null;
+}
+
+export function getFallbackSubjectPatternsForKelompok(
+    kelompokCode: string
+): string[] {
+    const normalizedCode = normalizeKelompokCode(kelompokCode);
+    const matchedRule = FALLBACK_SUBJECT_RULES.find(
+        (rule) => rule.code === normalizedCode
+    );
+    return matchedRule?.patterns ?? [];
 }
 
 export function resolveKelompokCodeForSubject(

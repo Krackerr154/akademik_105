@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/Badge";
 import {
     DEFAULT_DOCUMENT_TYPE_OPTIONS,
     DocumentTypeOption,
-    normalizeDocumentTypeCode,
     normalizeKelompokCode,
     normalizeSubjectKey,
 } from "@/types";
@@ -51,6 +50,13 @@ interface SubjectCardData {
     fileCount: number;
 }
 
+interface FilesApiMeta {
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+}
+
 type ContentTab = "mata-kuliah" | "file";
 
 export default function KelompokFolderPage() {
@@ -75,8 +81,15 @@ export default function KelompokFolderPage() {
     const [filterDocType, setFilterDocType] = useState("");
     const [filterType, setFilterType] = useState("");
     const [page, setPage] = useState(1);
+    const perPage = view === "grid" ? ITEMS_PER_PAGE_GRID : ITEMS_PER_PAGE_LIST;
 
     const [files, setFiles] = useState<FileData[]>([]);
+    const [filesMeta, setFilesMeta] = useState<FilesApiMeta>({
+        total: 0,
+        page: 1,
+        pageSize: perPage,
+        totalPages: 1,
+    });
     const [loadingFiles, setLoadingFiles] = useState(true);
     const [loadingKelompok, setLoadingKelompok] = useState(true);
 
@@ -172,17 +185,55 @@ export default function KelompokFolderPage() {
         let alive = true;
 
         const fetchFiles = async () => {
-            if (!kelompokCodeFromRoute) return;
+            if (!kelompokCodeFromRoute || !selectedSubjectKey) {
+                if (!alive) return;
+                setFiles([]);
+                setFilesMeta({
+                    total: 0,
+                    page: 1,
+                    pageSize: perPage,
+                    totalPages: 1,
+                });
+                setLoadingFiles(false);
+                return;
+            }
 
             setLoadingFiles(true);
             try {
-                const res = await fetch(
-                    `/api/files?category=${encodeURIComponent(kelompokCodeFromRoute)}`
-                );
+                const params = new URLSearchParams();
+                params.set("category", kelompokCodeFromRoute);
+                params.set("subject", selectedSubjectKey);
+                params.set("sort", sort);
+                params.set("page", String(page));
+                params.set("pageSize", String(perPage));
+
+                if (filterDocType) {
+                    params.set("docType", filterDocType);
+                }
+
+                if (filterType) {
+                    params.set("mimeType", filterType);
+                }
+
+                const res = await fetch(`/api/files?${params.toString()}`);
                 if (!res.ok) return;
 
                 const data = await res.json();
-                if (alive) setFiles(data.files ?? []);
+                if (!alive) return;
+
+                const nextMeta: FilesApiMeta = {
+                    total: Number(data?.meta?.total ?? 0),
+                    page: Number(data?.meta?.page ?? 1),
+                    pageSize: Number(data?.meta?.pageSize ?? perPage),
+                    totalPages: Math.max(1, Number(data?.meta?.totalPages ?? 1)),
+                };
+
+                setFiles(Array.isArray(data?.files) ? data.files : []);
+                setFilesMeta(nextMeta);
+
+                if (nextMeta.page !== page) {
+                    setPage(nextMeta.page);
+                }
             } catch (err) {
                 console.error("Gagal memuat file:", err);
             } finally {
@@ -195,7 +246,15 @@ export default function KelompokFolderPage() {
         return () => {
             alive = false;
         };
-    }, [kelompokCodeFromRoute]);
+    }, [
+        filterDocType,
+        filterType,
+        kelompokCodeFromRoute,
+        page,
+        perPage,
+        selectedSubjectKey,
+        sort,
+    ]);
 
     useEffect(() => {
         let alive = true;
@@ -273,43 +332,9 @@ export default function KelompokFolderPage() {
         updateSubjectQuery("");
     }, [selectedSubjectCard, selectedSubjectKey, updateSubjectQuery]);
 
-    const sorted = [...files].sort((a, b) => {
-        switch (sort) {
-            case "oldest":
-                return a.createdAt - b.createdAt;
-            case "title":
-                return a.title.localeCompare(b.title);
-            case "size":
-                return b.sizeBytes - a.sizeBytes;
-            default:
-                return b.createdAt - a.createdAt;
-        }
-    });
-
-    const filtered = sorted.filter((f) => {
-        if (
-            selectedSubjectKey &&
-            normalizeSubjectKey(String(f.subject ?? "")) !== selectedSubjectKey
-        ) {
-            return false;
-        }
-        if (
-            filterDocType &&
-            normalizeDocumentTypeCode(f.docType ?? "") !== filterDocType
-        ) {
-            return false;
-        }
-        if (filterType && f.mimeType !== filterType) return false;
-        return true;
-    });
-
-    const perPage = view === "grid" ? ITEMS_PER_PAGE_GRID : ITEMS_PER_PAGE_LIST;
-    const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
-    const safeCurrentPage = Math.min(page, totalPages);
-    const paginated = filtered.slice(
-        (safeCurrentPage - 1) * perPage,
-        safeCurrentPage * perPage
-    );
+    const totalPages = filesMeta.totalPages;
+    const safeCurrentPage = filesMeta.page;
+    const totalFiles = filesMeta.total;
 
     const handleSelectSubject = (subjectKey: string) => {
         const normalized = normalizeSubjectKey(subjectKey);
@@ -400,7 +425,7 @@ export default function KelompokFolderPage() {
                                 <DriveTabButton
                                     label="File"
                                     selected={contentTab === "file"}
-                                    count={filtered.length}
+                                    count={totalFiles}
                                     onClick={() => setContentTab("file")}
                                 />
                             )}
@@ -556,9 +581,10 @@ export default function KelompokFolderPage() {
                                         ]}
                                         label="URUTKAN"
                                         value={sort}
-                                        onChange={(e) =>
-                                            setSort((e.target as HTMLSelectElement).value)
-                                        }
+                                        onChange={(e) => {
+                                            setSort((e.target as HTMLSelectElement).value);
+                                            setPage(1);
+                                        }}
                                         className="w-full sm:w-40"
                                     />
 
@@ -603,10 +629,10 @@ export default function KelompokFolderPage() {
                             ) : (
                                 <>
                                     <p className="text-xs text-on-surface/40 mb-4">
-                                        {filtered.length} file ditemukan
+                                        {totalFiles} file ditemukan
                                     </p>
 
-                                    <FileGrid files={paginated} view={view} />
+                                    <FileGrid files={files} view={view} />
 
                                     {totalPages > 1 && (
                                         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">

@@ -1,9 +1,11 @@
 import { auth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { files, kelompokCards, subjectKelompokMappings } from "@/db/schema";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { normalizeSubjectKey } from "@/types";
+
+const PRIVATE_CACHE_CONTROL = "private, max-age=300, stale-while-revalidate=600";
 
 /** GET /api/kelompok — active dashboard category cards + subject mappings */
 export async function GET() {
@@ -18,8 +20,9 @@ export async function GET() {
     }
 
     const db = getDb();
+    const normalizedSubjectExpr = sql<string>`upper(trim(${files.subject}))`;
 
-    const [cardsRaw, mappings, subjectsRaw] = await Promise.all([
+    const [cardsRaw, mappings, subjectCountsRaw] = await Promise.all([
         db
             .select()
             .from(kelompokCards)
@@ -30,16 +33,19 @@ export async function GET() {
             .from(subjectKelompokMappings)
             .orderBy(asc(subjectKelompokMappings.subjectLabel)),
         db
-            .select({ subject: files.subject })
+            .select({
+                subjectKey: normalizedSubjectExpr,
+                fileCount: sql<number>`count(*)`,
+            })
             .from(files)
-            .orderBy(asc(files.subject)),
+            .groupBy(normalizedSubjectExpr),
     ]);
 
     const countBySubjectKey = new Map<string, number>();
-    for (const row of subjectsRaw) {
-        const key = normalizeSubjectKey(String(row.subject ?? ""));
+    for (const row of subjectCountsRaw) {
+        const key = normalizeSubjectKey(String(row.subjectKey ?? ""));
         if (!key) continue;
-        countBySubjectKey.set(key, (countBySubjectKey.get(key) ?? 0) + 1);
+        countBySubjectKey.set(key, Number(row.fileCount ?? 0));
     }
 
     const cards = cardsRaw.map((card) => ({
@@ -55,5 +61,12 @@ export async function GET() {
         fileCount: countBySubjectKey.get(row.subjectKey) ?? 0,
     }));
 
-    return NextResponse.json({ cards, mappings, subjectCards });
+    const headers = new Headers();
+    headers.set("Cache-Control", PRIVATE_CACHE_CONTROL);
+    headers.set("Vary", "Cookie");
+
+    return NextResponse.json(
+        { cards, mappings, subjectCards },
+        { headers }
+    );
 }

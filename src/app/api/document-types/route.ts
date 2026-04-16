@@ -4,6 +4,8 @@ import { documentTypes } from "@/db/schema";
 import { asc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
+const PRIVATE_CACHE_CONTROL = "private, max-age=300, stale-while-revalidate=900";
+
 /** GET /api/document-types — Active document types for upload/edit forms */
 export async function GET() {
     const session = await auth();
@@ -30,5 +32,9 @@ export async function GET() {
         .where(eq(documentTypes.isActive, 1))
         .orderBy(asc(documentTypes.sortOrder), asc(documentTypes.code));
 
-    return NextResponse.json({ types });
+    const headers = new Headers();
+    headers.set("Cache-Control", PRIVATE_CACHE_CONTROL);
+    headers.set("Vary", "Cookie");
+
+    return NextResponse.json({ types }, { headers });
 }

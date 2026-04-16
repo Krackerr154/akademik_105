@@ -133,9 +133,7 @@ export function FilePreview({ fileId, mimeType, fileTitle }: FilePreviewProps) {
             }
 
             try {
-                const res = await fetch(`/api/files/${fileId}/preview`, {
-                    cache: "no-store",
-                });
+                const res = await fetch(`/api/files/${fileId}/preview`);
                 const data = (await res.json().catch(() => ({}))) as {
                     url?: unknown;
                     error?: unknown;

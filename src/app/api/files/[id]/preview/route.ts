@@ -5,6 +5,8 @@ import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { generatePreviewUrl } from "@/lib/drive/signed-url";
 
+const PRIVATE_CACHE_CONTROL = "private, max-age=60, must-revalidate";
+
 function errorResponse(error: string, status: number, code: string) {
     return NextResponse.json({ error, code }, { status });
 }
@@ -56,5 +58,9 @@ export async function GET(
         );
     }
 
-    return NextResponse.json({ url });
+    const headers = new Headers();
+    headers.set("Cache-Control", PRIVATE_CACHE_CONTROL);
+    headers.set("Vary", "Cookie");
+
+    return NextResponse.json({ url }, { headers });
 }

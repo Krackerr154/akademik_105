@@ -1,5 +1,4 @@
-import { Sidebar } from "@/components/layout/Sidebar";
-import { Navbar } from "@/components/layout/Navbar";
+import { AppShell } from "@/components/layout/AppShell";
 import { auth } from "@/lib/auth";
 
 export default async function MemberLayout({
@@ -8,15 +7,18 @@ export default async function MemberLayout({
     children: React.ReactNode;
 }) {
     const session = await auth();
-    const user = session?.user as { role?: string } | undefined;
+    const user = session?.user as
+        | { role?: string; name?: string | null; image?: string | null }
+        | undefined;
 
     return (
-        <div className="min-h-screen bg-surface">
-            <Sidebar userRole={user?.role} />
-            <div className="ml-[220px]">
-                <Navbar />
-                <main className="px-6 py-6">{children}</main>
-            </div>
-        </div>
+        <AppShell
+            userRole={user?.role}
+            userName={user?.name ?? null}
+            userAvatar={user?.image ?? null}
+            userRoleLabel={user?.role}
+        >
+            {children}
+        </AppShell>
     );
 }

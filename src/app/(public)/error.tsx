@@ -20,7 +20,7 @@ export default function PublicError({
             </p>
             <button
                 onClick={reset}
-                className="px-4 py-2 rounded-md bg-primary text-on-primary text-sm font-medium hover:bg-primary/90 transition-colors"
+                className="min-h-11 px-6 py-2 rounded-md bg-primary text-on-primary text-sm font-medium hover:bg-primary/90 transition-colors"
             >
                 Coba Lagi
             </button>

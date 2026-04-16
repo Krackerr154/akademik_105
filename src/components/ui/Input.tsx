@@ -16,7 +16,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
                 {label && (
                     <label
                         htmlFor={id}
-                        className="text-xs font-medium text-on-surface/60 uppercase tracking-wide"
+                        className="text-[13px] font-medium text-on-surface/70 uppercase tracking-wide"
                     >
                         {label}
                     </label>
@@ -56,7 +56,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
                 {label && (
                     <label
                         htmlFor={id}
-                        className="text-xs font-medium text-on-surface/60 uppercase tracking-wide"
+                        className="text-[13px] font-medium text-on-surface/70 uppercase tracking-wide"
                     >
                         {label}
                     </label>
@@ -96,7 +96,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
                 {label && (
                     <label
                         htmlFor={id}
-                        className="text-xs font-medium text-on-surface/60 uppercase tracking-wide"
+                        className="text-[13px] font-medium text-on-surface/70 uppercase tracking-wide"
                     >
                         {label}
                     </label>

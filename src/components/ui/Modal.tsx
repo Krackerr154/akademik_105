@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useId } from "react";
 
 interface ModalProps {
     open: boolean;
@@ -13,6 +13,7 @@ interface ModalProps {
 
 export function Modal({ open, onClose, children, title, className }: ModalProps) {
     const overlayRef = useRef<HTMLDivElement>(null);
+    const titleId = useId();
 
     const handleEsc = useCallback(
         (e: KeyboardEvent) => {
@@ -37,7 +38,7 @@ export function Modal({ open, onClose, children, title, className }: ModalProps)
     return (
         <div
             ref={overlayRef}
-            className="fixed inset-0 z-50 flex items-center justify-center"
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
             onClick={(e) => {
                 if (e.target === overlayRef.current) onClose();
             }}
@@ -47,13 +48,16 @@ export function Modal({ open, onClose, children, title, className }: ModalProps)
 
             {/* Panel */}
             <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={title ? titleId : undefined}
                 className={cn(
-                    "relative z-10 w-full max-w-lg mx-4 bg-surface-container-lowest rounded-md shadow-ambient p-6 animate-in fade-in-0 zoom-in-95",
+                    "relative z-10 w-[calc(100vw-2rem)] sm:w-full max-w-lg bg-surface-container-lowest rounded-md shadow-ambient p-5 sm:p-6 max-h-[calc(100vh-2rem)] overflow-y-auto animate-in fade-in-0 zoom-in-95",
                     className
                 )}
             >
                 {title && (
-                    <h2 className="text-lg font-semibold text-primary mb-4 font-display">
+                    <h2 id={titleId} className="text-lg font-semibold text-primary mb-4 font-display">
                         {title}
                     </h2>
                 )}

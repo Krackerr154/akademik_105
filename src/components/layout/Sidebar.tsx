@@ -24,9 +24,11 @@ const ADMIN_ITEMS = [
 
 interface SidebarProps {
     userRole?: string;
+    mobileOpen?: boolean;
+    onClose?: () => void;
 }
 
-export function Sidebar({ userRole }: SidebarProps) {
+export function Sidebar({ userRole, mobileOpen = false, onClose }: SidebarProps) {
     const pathname = usePathname();
     const isAdmin = userRole === "admin" || userRole === "superadmin";
     const visibleNavItems = isAdmin
@@ -34,10 +36,37 @@ export function Sidebar({ userRole }: SidebarProps) {
         : NAV_ITEMS.filter((item) => item.href !== "/upload");
 
     return (
-        <aside className="fixed left-0 top-0 bottom-0 w-[220px] bg-surface-container-low flex flex-col z-40">
+        <>
+            <div
+                className={cn(
+                    "fixed inset-0 z-40 bg-black/40 transition-opacity md:hidden",
+                    mobileOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+                )}
+                onClick={onClose}
+                aria-hidden={!mobileOpen}
+            />
+
+            <aside
+                className={cn(
+                    "fixed left-0 top-0 bottom-0 w-[220px] bg-surface-container-low flex flex-col z-50 md:z-40 transform transition-transform duration-200",
+                    mobileOpen
+                        ? "translate-x-0"
+                        : "-translate-x-full md:translate-x-0 pointer-events-none md:pointer-events-auto"
+                )}
+            >
             {/* Logo */}
-            <div className="px-5 pt-6 pb-4">
-                <Link href="/" className="flex items-center gap-2.5">
+            <div className="px-5 pt-4 md:pt-6 pb-4">
+                <div className="flex items-center justify-end mb-2 md:hidden">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="w-9 h-9 rounded-md flex items-center justify-center text-on-surface/60 hover:text-on-surface hover:bg-surface-container-high/50 transition-colors"
+                        aria-label="Tutup navigasi"
+                    >
+                        <CloseIcon className="w-4 h-4" />
+                    </button>
+                </div>
+                <Link href="/" className="flex items-center gap-2.5" onClick={onClose}>
                     <div className="w-8 h-8 rounded-md gradient-cta flex items-center justify-center">
                         <span className="text-on-secondary font-display font-bold text-sm">
                             A
@@ -62,6 +91,7 @@ export function Sidebar({ userRole }: SidebarProps) {
                         <Link
                             key={item.href}
                             href={item.href}
+                            onClick={onClose}
                             className={cn(
                                 "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150",
                                 isActive
@@ -97,6 +127,7 @@ export function Sidebar({ userRole }: SidebarProps) {
                                 <Link
                                     key={item.href}
                                     href={item.href}
+                                    onClick={onClose}
                                     className={cn(
                                         "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150",
                                         isActive
@@ -121,14 +152,24 @@ export function Sidebar({ userRole }: SidebarProps) {
             {/* CTA */}
             <div className="px-3 pb-6">
                 {isAdmin && (
-                    <Link href="/upload">
+                    <Link href="/upload" onClick={onClose}>
                         <Button variant="primary" size="sm" className="w-full">
                             + Unggah Dokumen
                         </Button>
                     </Link>
                 )}
             </div>
-        </aside>
+            </aside>
+        </>
+    );
+}
+
+function CloseIcon({ className }: { className?: string }) {
+    return (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
     );
 }
 

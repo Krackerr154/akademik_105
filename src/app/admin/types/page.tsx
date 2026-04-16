@@ -164,8 +164,8 @@ export default function AdminTypesPage() {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
-                <Card className="xl:col-span-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
+                <Card className="md:col-span-1 xl:col-span-1">
                     <h2 className="text-lg font-display font-semibold text-primary mb-4">Tambah Tipe Baru</h2>
                     <div className="space-y-4">
                         <Input
@@ -192,7 +192,7 @@ export default function AdminTypesPage() {
                     </div>
                 </Card>
 
-                <div className="xl:col-span-2 space-y-4">
+                <div className="md:col-span-1 xl:col-span-2 space-y-4">
                     {loading ? (
                         <Card>
                             <p className="text-sm text-on-surface/60">Memuat tipe dokumen...</p>

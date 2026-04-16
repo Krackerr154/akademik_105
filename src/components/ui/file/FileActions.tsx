@@ -128,7 +128,7 @@ export function FileActions({
 
     return (
         <>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
                 <a href={`/api/files/${file.id}/download`} target="_blank" rel="noreferrer">
                     <Button variant="primary">
                         <DownloadIcon className="w-4 h-4 mr-2" />
@@ -145,19 +145,20 @@ export function FileActions({
 
             {/* Edit Modal Backdrop */}
             {isEditModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
-                    <div className="bg-surface rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="p-6 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-lowest shrink-0">
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+                    <div className="bg-surface rounded-xl shadow-2xl w-full max-w-lg md:max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="p-4 sm:p-6 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-lowest shrink-0">
                             <h2 className="text-xl font-display font-medium text-on-surface">Edit Metadata</h2>
                             <button
                                 onClick={() => setIsEditModalOpen(false)}
                                 className="text-on-surface-variant hover:text-on-surface p-1 rounded-full hover:bg-surface-container transition-colors"
+                                aria-label="Tutup modal"
                             >
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                             </button>
                         </div>
 
-                        <div className="p-6 overflow-y-auto space-y-5">
+                        <div className="p-4 sm:p-6 overflow-y-auto space-y-5">
                             {error && (
                                 <div className="p-3 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded-md text-sm">
                                     {error}
@@ -172,7 +173,7 @@ export function FileActions({
                                 required
                             />
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <Input
                                     id="edit-subject"
                                     label="MATA KULIAH"
@@ -229,11 +230,12 @@ export function FileActions({
                             )}
                         </div>
 
-                        <div className="p-6 border-t border-outline-variant/30 bg-surface-container-lowest flex justify-end gap-3 shrink-0">
+                        <div className="p-4 sm:p-6 border-t border-outline-variant/30 bg-surface-container-lowest flex flex-col-reverse sm:flex-row justify-end gap-3 shrink-0">
                             <Button
                                 variant="secondary"
                                 onClick={() => setIsEditModalOpen(false)}
                                 disabled={loading}
+                                className="w-full sm:w-auto"
                             >
                                 Batal
                             </Button>
@@ -241,6 +243,7 @@ export function FileActions({
                                 variant="primary"
                                 onClick={handleSave}
                                 disabled={loading}
+                                className="w-full sm:w-auto"
                             >
                                 {loading ? "Menyimpan..." : "Simpan Perubahan"}
                             </Button>

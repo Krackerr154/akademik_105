@@ -8,7 +8,7 @@ export default function SettingsPage() {
     return (
         <div>
             <div className="flex items-center gap-2 text-xs text-on-surface/50 font-sans mb-2"><span>ADMIN</span><span>›</span><span className="text-on-surface/70">PENGATURAN SISTEM</span></div>
-            <h1 className="text-3xl font-display font-bold text-primary mb-6">Pengaturan Sistem</h1>
+            <h1 className="text-2xl md:text-3xl font-display font-bold text-primary mb-6">Pengaturan Sistem</h1>
             <div className="space-y-6 max-w-xl">
                 <Card>
                     <h2 className="text-lg font-display font-semibold text-primary mb-4">Google Form Sync</h2>
@@ -23,7 +23,7 @@ export default function SettingsPage() {
                         <Input id="admin_wa" label="WHATSAPP ADMIN" placeholder="+62xxx" mono />
                     </div>
                 </Card>
-                <Button variant="primary">Simpan Pengaturan</Button>
+                <Button variant="primary" className="w-full sm:w-auto">Simpan Pengaturan</Button>
             </div>
         </div>
     );

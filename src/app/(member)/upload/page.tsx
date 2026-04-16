@@ -351,14 +351,14 @@ export default function BatchUploadPage() {
                 <span>ARSIP</span><span>›</span>
                 <span className="text-on-surface/70">BATCH UPLOAD</span>
             </div>
-            <h1 className="text-3xl font-display font-bold text-primary mb-2">Unggah Dokumen (Batch)</h1>
+            <h1 className="text-2xl md:text-3xl font-display font-bold text-primary mb-2">Unggah Dokumen (Batch)</h1>
             <p className="text-on-surface/60 text-sm mb-8 max-w-xl">
                 Unggah banyak file sekaligus. Sistem otomatis menebak tipe dokumen, judul, mata kuliah, dan tahun berdasarkan pola nama file (misal: [UJIAN 1] KUGU 2021.pdf).
             </p>
 
             {/* STEP 1: SELECT FILES */}
             {step === "SELECT" && (
-                <div className={`bg-surface-container-lowest rounded-md shadow-ambient p-8 text-center border-2 border-dashed cursor-pointer transition-colors ${dragOver ? "border-secondary bg-secondary/5" : "border-outline-variant/30 hover:border-secondary/40"}`}
+                <div className={`bg-surface-container-lowest rounded-md shadow-ambient p-4 sm:p-8 text-center border-2 border-dashed cursor-pointer transition-colors ${dragOver ? "border-secondary bg-secondary/5" : "border-outline-variant/30 hover:border-secondary/40"}`}
                     onClick={() => fileInputRef.current?.click()}
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
@@ -383,9 +383,9 @@ export default function BatchUploadPage() {
             {/* STEP 2: REVIEW / PREVIEW */}
             {step === "REVIEW" && (
                 <div className="space-y-6">
-                    <div className="flex flex-wrap justify-between items-center bg-surface-container-low p-4 rounded-md shadow-sm gap-4">
+                    <div className="flex flex-col sm:flex-row sm:flex-wrap justify-between sm:items-center bg-surface-container-low p-4 rounded-md shadow-sm gap-4">
                         <h3 className="font-semibold text-lg text-primary">Tinjau Metadata ({filesQueue.length} file)</h3>
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
                             <input
                                 ref={fileInputRef}
                                 type="file"
@@ -394,11 +394,11 @@ export default function BatchUploadPage() {
                                 accept={ALLOWED_MIME_TYPES.join(",")}
                                 onChange={(e) => handleFilesSelect(e.target.files)}
                             />
-                            <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>Tambah File</Button>
+                            <Button variant="secondary" onClick={() => fileInputRef.current?.click()} className="w-full sm:w-auto">Tambah File</Button>
                             <Button 
                                 onClick={startBatchUpload}
                                 disabled={hasInvalidRequiredMetadata}
-                                className={hasInvalidRequiredMetadata ? "opacity-50 cursor-not-allowed" : ""}
+                                className={`${hasInvalidRequiredMetadata ? "opacity-50 cursor-not-allowed" : ""} w-full sm:w-auto`}
                                 title={hasInvalidRequiredMetadata ? "Pastikan Judul, Mata Kuliah, dan Tipe Dokumen terisi" : ""}
                             >
                                 Mulai Upload
@@ -407,8 +407,8 @@ export default function BatchUploadPage() {
                     </div>
 
                     {filesQueue.length > 1 && (
-                        <div className="bg-secondary/5 p-4 rounded-md border border-secondary/20 flex flex-wrap gap-4 items-end">
-                            <div className="flex-1 min-w-[220px]">
+                        <div className="bg-secondary/5 p-4 rounded-md border border-secondary/20 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                            <div className="w-full sm:col-span-2 lg:col-span-2">
                                 <DocumentTypeSelector
                                     id="global-doc-type"
                                     label="TIPE DOKUMEN (Semua)"
@@ -418,19 +418,19 @@ export default function BatchUploadPage() {
                                     showQuickPicks={false}
                                 />
                             </div>
-                            <div className="flex-1 min-w-[200px]">
+                            <div className="w-full">
                                 <Input 
                                     id="global-sub" label="MATA KULIAH (Semua)" 
                                     value={globalSubject} onChange={e => setGlobalSubject(e.target.value)} 
                                 />
                             </div>
-                            <div className="flex-1 min-w-[100px]">
+                            <div className="w-full">
                                 <Input 
                                     id="global-year" label="TAHUN (Semua)" 
                                     value={globalYear} onChange={e => setGlobalYear(e.target.value)} 
                                 />
                             </div>
-                            <div className="flex-1 min-w-[100px]">
+                            <div className="w-full">
                                 <p className="text-xs text-on-surface/60 mb-2">VISIBILITAS (Semua)</p>
                                 <select 
                                     className="w-full bg-surface text-on-surface p-2 rounded border border-outline/30 focus:border-secondary focus:outline-none"
@@ -441,7 +441,7 @@ export default function BatchUploadPage() {
                                     <option value="admin_only">Hanya Admin</option>
                                 </select>
                             </div>
-                            <Button variant="secondary" onClick={applyGlobalSettings}>Terapkan</Button>
+                            <Button variant="secondary" onClick={applyGlobalSettings} className="w-full lg:w-auto">Terapkan</Button>
                         </div>
                     )}
 
@@ -453,7 +453,7 @@ export default function BatchUploadPage() {
 
                     {filesQueue.length === 1 ? (
                         <div className="bg-surface-container-lowest p-6 rounded-md shadow-sm border border-outline-variant/30 flex flex-col md:flex-row gap-8">
-                            <div className="md:w-1/3 flex flex-col gap-4 border-r border-outline-variant/30 pr-6">
+                            <div className="md:w-1/3 flex flex-col gap-4 md:border-r border-outline-variant/30 md:pr-6">
                                 <div className="p-4 bg-surface-container-low rounded-md flex flex-col items-center text-center gap-3">
                                     <FileIcon className="w-12 h-12 text-secondary" />
                                     <div>
@@ -526,7 +526,7 @@ export default function BatchUploadPage() {
                         <div className="grid gap-4">
                             {filesQueue.map((item, i) => (
                                 <div key={item.id} className="bg-surface-container-lowest p-5 rounded-md shadow-sm border border-outline-variant/30 flex flex-col md:flex-row gap-6 hover:border-outline-variant/60 transition-colors">
-                                    <div className="flex flex-col gap-2 md:w-1/3 border-r border-outline-variant/30 pr-4">
+                                    <div className="flex flex-col gap-2 md:w-1/3 md:border-r border-outline-variant/30 md:pr-4">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2 overflow-hidden" title={item.file.name}>
                                                 <FileIcon className="w-5 h-5 text-secondary shrink-0" />

@@ -162,18 +162,19 @@ export default function MembersPage() {
                 <span>ADMIN</span><span>›</span>
                 <span className="text-on-surface/70">ANTRIAN PERSETUJUAN</span>
             </div>
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
                 <div>
                     <h1 className="text-3xl font-display font-bold text-primary mb-1">Antrian Persetujuan</h1>
                     <p className="text-sm text-on-surface/60">
                         Pendaftaran anggota baru dari Google Form ({pendingMembers.length} pending)
                     </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
                     <Button
                         variant="secondary"
                         onClick={handleSync}
                         disabled={syncing}
+                        className="w-full sm:w-auto"
                     >
                         {syncing ? "Sinkronisasi..." : "Sinkronisasi GForm"}
                     </Button>
@@ -181,6 +182,7 @@ export default function MembersPage() {
                         variant="primary"
                         onClick={handleBulkApprove}
                         disabled={bulkApproving}
+                        className="w-full sm:w-auto"
                     >
                         {bulkApproving ? "Memproses..." : "Setujui Massal"}
                     </Button>
@@ -204,16 +206,16 @@ export default function MembersPage() {
                             <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
                         </div>
                     ) : (
-                        <table className="w-full text-sm">
+                        <table className="w-full text-sm min-w-[620px]">
                             <thead>
-                                <tr className="text-left text-xs text-on-surface/50 uppercase tracking-wide">
-                                    <th className="pb-3 pr-4">Nama</th>
-                                    <th className="pb-3 pr-4">Email</th>
-                                    <th className="pb-3 pr-4">NIM</th>
-                                    <th className="pb-3 pr-4">Angkatan</th>
-                                    <th className="pb-3 pr-4">Program</th>
-                                    <th className="pb-3 pr-4">Validasi</th>
-                                    <th className="pb-3">Aksi</th>
+                                <tr className="text-left text-xs text-on-surface/50 uppercase tracking-wide sticky top-0 bg-surface-container-lowest">
+                                    <th className="py-3 pr-4">Nama</th>
+                                    <th className="py-3 pr-4 hidden md:table-cell">Email</th>
+                                    <th className="py-3 pr-4 hidden md:table-cell">NIM</th>
+                                    <th className="py-3 pr-4 hidden md:table-cell">Angkatan</th>
+                                    <th className="py-3 pr-4">Program</th>
+                                    <th className="py-3 pr-4">Validasi</th>
+                                    <th className="py-3">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -231,19 +233,19 @@ export default function MembersPage() {
                                         return (
                                             <tr key={m.id} className="border-t border-surface-container-high/50">
                                                 <td className="py-3 pr-4 font-medium">{m.fullName}</td>
-                                                <td className="py-3 pr-4 text-on-surface/70">{m.email}</td>
-                                                <td className="py-3 pr-4 font-mono text-xs">{m.nim}</td>
-                                                <td className="py-3 pr-4">{m.angkatan}</td>
+                                                <td className="py-3 pr-4 text-on-surface/70 hidden md:table-cell">{m.email}</td>
+                                                <td className="py-3 pr-4 font-mono text-xs hidden md:table-cell">{m.nim}</td>
+                                                <td className="py-3 pr-4 hidden md:table-cell">{m.angkatan}</td>
                                                 <td className="py-3 pr-4 capitalize">{m.program}</td>
                                                 <td className="py-3 pr-4">
                                                     <NimFlagBadge member={m} />
                                                 </td>
                                                 <td className="py-3">
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                                                         <button
                                                             onClick={() => handleAction(m.id, "approve")}
                                                             disabled={hasHardBlock || isProcessing}
-                                                            className="px-3 py-1 text-xs rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                                            className="min-h-10 px-4 py-2 text-xs rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                                                             title={hasHardBlock ? "Tidak dapat disetujui — NIM tidak valid" : "Setujui"}
                                                         >
                                                             Setujui
@@ -251,7 +253,7 @@ export default function MembersPage() {
                                                         <button
                                                             onClick={() => handleAction(m.id, "reject")}
                                                             disabled={isProcessing}
-                                                            className="px-3 py-1 text-xs rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 transition-colors"
+                                                            className="min-h-10 px-4 py-2 text-xs rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-40 transition-colors"
                                                         >
                                                             Tolak
                                                         </button>

@@ -467,7 +467,7 @@ export default function KelompokFolderPage() {
 
                     {selectedSubjectCard && contentTab === "file" && (
                         <>
-                            <div className="mb-4 text-xs text-on-surface/60">
+                            <div className="mb-4 text-sm md:text-xs text-on-surface/60">
                                 Menampilkan: <span className="font-semibold text-primary">{selectedCard?.name}</span>
                                 <span> › </span>
                                 <span className="font-semibold text-primary">
@@ -475,8 +475,8 @@ export default function KelompokFolderPage() {
                                 </span>
                             </div>
 
-                            <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-                                <div className="flex items-center gap-3">
+                            <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-6 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:items-center gap-3 w-full md:w-auto">
                                     <Select
                                         options={[
                                             { value: "", label: "Semua Mata Kuliah" },
@@ -497,7 +497,7 @@ export default function KelompokFolderPage() {
                                             }
                                             handleSelectSubject(nextKey);
                                         }}
-                                        className="w-56"
+                                        className="w-full sm:w-56"
                                     />
                                     <Select
                                         options={[
@@ -517,7 +517,7 @@ export default function KelompokFolderPage() {
                                             );
                                             setPage(1);
                                         }}
-                                        className="w-48"
+                                        className="w-full sm:w-48"
                                     />
                                     <Select
                                         options={[
@@ -542,10 +542,11 @@ export default function KelompokFolderPage() {
                                             setFilterType((e.target as HTMLSelectElement).value);
                                             setPage(1);
                                         }}
+                                        className="w-full sm:w-48"
                                     />
                                 </div>
 
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto">
                                     <Select
                                         options={[
                                             { value: "newest", label: "Terbaru" },
@@ -558,6 +559,7 @@ export default function KelompokFolderPage() {
                                         onChange={(e) =>
                                             setSort((e.target as HTMLSelectElement).value)
                                         }
+                                        className="w-full sm:w-40"
                                     />
 
                                     <div className="flex items-center gap-1 bg-surface-container-low rounded-md p-1">
@@ -566,11 +568,12 @@ export default function KelompokFolderPage() {
                                                 setView("grid");
                                                 setPage(1);
                                             }}
-                                            className={`p-1.5 rounded-sm transition-colors ${
+                                            className={`w-11 h-11 rounded-sm flex items-center justify-center transition-colors ${
                                                 view === "grid"
                                                     ? "bg-surface-container-lowest text-secondary"
                                                     : "text-on-surface/40 hover:text-on-surface"
                                             }`}
+                                            aria-label="Tampilan grid"
                                         >
                                             <GridIcon className="w-4 h-4" />
                                         </button>
@@ -579,11 +582,12 @@ export default function KelompokFolderPage() {
                                                 setView("list");
                                                 setPage(1);
                                             }}
-                                            className={`p-1.5 rounded-sm transition-colors ${
+                                            className={`w-11 h-11 rounded-sm flex items-center justify-center transition-colors ${
                                                 view === "list"
                                                     ? "bg-surface-container-lowest text-secondary"
                                                     : "text-on-surface/40 hover:text-on-surface"
                                             }`}
+                                            aria-label="Tampilan daftar"
                                         >
                                             <ListIcon className="w-4 h-4" />
                                         </button>
@@ -605,17 +609,17 @@ export default function KelompokFolderPage() {
                                     <FileGrid files={paginated} view={view} />
 
                                     {totalPages > 1 && (
-                                        <div className="flex items-center justify-center gap-2 mt-8">
+                                        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
                                             <button
                                                 onClick={() =>
                                                     setPage((p) => Math.max(1, p - 1))
                                                 }
                                                 disabled={safeCurrentPage <= 1}
-                                                className="px-3 py-1.5 text-xs rounded-md bg-surface-container-low text-on-surface/60 hover:text-on-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                                className="min-h-11 px-4 py-2 text-sm rounded-md bg-surface-container-low text-on-surface/60 hover:text-on-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                             >
                                                 ← Sebelumnya
                                             </button>
-                                            <span className="text-xs text-on-surface/50">
+                                            <span className="text-sm sm:text-xs text-on-surface/50">
                                                 Halaman {safeCurrentPage} dari {totalPages}
                                             </span>
                                             <button
@@ -625,7 +629,7 @@ export default function KelompokFolderPage() {
                                                     )
                                                 }
                                                 disabled={safeCurrentPage >= totalPages}
-                                                className="px-3 py-1.5 text-xs rounded-md bg-surface-container-low text-on-surface/60 hover:text-on-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                                className="min-h-11 px-4 py-2 text-sm rounded-md bg-surface-container-low text-on-surface/60 hover:text-on-surface disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                             >
                                                 Selanjutnya →
                                             </button>
@@ -675,7 +679,7 @@ function DriveTabButton({
             role="tab"
             aria-selected={selected}
             onClick={onClick}
-            className={`px-3 py-1.5 rounded-sm text-sm font-medium transition-colors inline-flex items-center gap-2 ${
+            className={`min-h-11 px-3 py-1.5 rounded-sm text-sm font-medium transition-colors inline-flex items-center gap-2 ${
                 selected
                     ? "bg-surface-container-lowest text-secondary"
                     : "text-on-surface/60 hover:text-on-surface"

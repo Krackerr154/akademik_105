@@ -96,10 +96,10 @@ export default function MemberPage() {
 
     return (
         <div>
-            <h1 className="text-3xl font-display font-bold text-primary mb-2">
+            <h1 className="text-2xl md:text-3xl font-display font-bold text-primary mb-2">
                 Repositori Akademik
             </h1>
-            <p className="text-on-surface/60 text-sm mb-6 max-w-xl">
+            <p className="text-on-surface/60 text-sm mb-6 max-w-full sm:max-w-xl">
                 Pilih kelompok keilmuan untuk membuka halaman mata kuliah khusus.
             </p>
 
@@ -145,7 +145,7 @@ export default function MemberPage() {
 
                     {driveCards.length > 0 && (
                         <>
-                            <h2 className="text-xs uppercase tracking-wider text-on-surface/50 font-mono mb-3">
+                            <h2 className="text-[11px] uppercase tracking-wider text-on-surface/50 font-mono mb-3">
                                 Kelompok keilmuan lainnya
                             </h2>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">

@@ -47,10 +47,10 @@ export function UsersPageClient({ isSuperadmin }: UsersPageClientProps) {
         <div>
             <div className="flex items-center gap-2 text-xs text-on-surface/50 font-sans mb-2"><span>ADMIN</span><span>›</span><span className="text-on-surface/70">MANAJEMEN PENGGUNA</span></div>
 
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
                 <h1 className="text-3xl font-display font-bold text-primary">Manajemen Pengguna</h1>
                 {isSuperadmin && (
-                    <Button onClick={() => setIsAddAdminModalOpen(true)}>
+                    <Button onClick={() => setIsAddAdminModalOpen(true)} className="w-full sm:w-auto">
                         Tambah Admin
                     </Button>
                 )}
@@ -58,16 +58,16 @@ export function UsersPageClient({ isSuperadmin }: UsersPageClientProps) {
 
             <Card>
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="w-full text-sm min-w-[560px]">
                         <thead>
-                            <tr className="text-left text-xs text-on-surface/50 uppercase tracking-wide">
-                                <th className="pb-3 pr-4">Nama</th>
-                                <th className="pb-3 pr-4">Email</th>
-                                <th className="pb-3 pr-4">NIM</th>
-                                <th className="pb-3 pr-4">Angkatan</th>
-                                <th className="pb-3 pr-4">Role</th>
-                                <th className="pb-3 pr-4">Status</th>
-                                <th className="pb-3">Aksi</th>
+                            <tr className="text-left text-xs text-on-surface/50 uppercase tracking-wide sticky top-0 bg-surface-container-lowest">
+                                <th className="py-3 pr-4">Nama</th>
+                                <th className="py-3 pr-4 hidden md:table-cell">Email</th>
+                                <th className="py-3 pr-4 hidden md:table-cell">NIM</th>
+                                <th className="py-3 pr-4 hidden md:table-cell">Angkatan</th>
+                                <th className="py-3 pr-4">Role</th>
+                                <th className="py-3 pr-4">Status</th>
+                                <th className="py-3">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -79,9 +79,9 @@ export function UsersPageClient({ isSuperadmin }: UsersPageClientProps) {
                                 users.map((user) => (
                                     <tr key={user.id} className="border-t border-on-surface/10">
                                         <td className="py-3 pr-4">{user.name || "-"}</td>
-                                        <td className="py-3 pr-4">{user.email}</td>
-                                        <td className="py-3 pr-4">{user.nim || "-"}</td>
-                                        <td className="py-3 pr-4">{user.angkatan || "-"}</td>
+                                        <td className="py-3 pr-4 hidden md:table-cell">{user.email}</td>
+                                        <td className="py-3 pr-4 hidden md:table-cell">{user.nim || "-"}</td>
+                                        <td className="py-3 pr-4 hidden md:table-cell">{user.angkatan || "-"}</td>
                                         <td className="py-3 pr-4">{user.role}</td>
                                         <td className="py-3 pr-4">{user.status}</td>
                                         <td className="py-3">-</td>

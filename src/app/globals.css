@@ -37,6 +37,9 @@
 
     body {
         @apply bg-surface text-on-surface;
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+        padding-bottom: env(safe-area-inset-bottom);
     }
 
     /* Manrope for display / headlines — negative letter-spacing for editorial feel */
@@ -81,5 +84,17 @@
     /* No-Line Rule enforcement — hide standard borders */
     .no-line {
         border: none !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }

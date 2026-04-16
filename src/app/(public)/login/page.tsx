@@ -9,17 +9,17 @@ export default function LoginPage({
         <div className="min-h-screen bg-surface flex flex-col items-center justify-center p-4">
             <div className="w-full max-w-md">
                 {/* Logo / Header Area */}
-                <div className="mb-10 text-center space-y-3">
-                    <h1 className="text-4xl md:text-5xl font-display font-medium text-primary tracking-tight">Akademik 105</h1>
+                <div className="mb-8 md:mb-10 text-center space-y-3">
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-display font-medium text-primary tracking-tight">Akademik 105</h1>
                     <p className="text-on-surface-variant text-sm tracking-widest uppercase font-mono">The Digital Archive</p>
                 </div>
 
                 {/* Login Card (Surface Container Lowest) */}
-                <div className="bg-surface-container-lowest p-8 md:p-10 shadow-ambient relative overflow-hidden">
+                <div className="bg-surface-container-lowest p-6 sm:p-8 md:p-10 shadow-ambient relative overflow-hidden">
                     {/* Ghost border via CSS classes or pseudo-element since border radius is 0 */}
                     <div className="absolute inset-0 ring-1 ring-inset ring-outline-variant/15 pointer-events-none"></div>
 
-                    <div className="space-y-6 relative z-10 relative">
+                    <div className="space-y-6 relative z-10">
                         <div className="space-y-2">
                             <h2 className="text-xl font-display font-medium text-primary">Autentikasi</h2>
                             <p className="text-sm text-on-surface-variant/80">Silakan masuk menggunakan akun Google ITB atau email yang telah terdaftar pada database sistem.</p>

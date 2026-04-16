@@ -35,7 +35,7 @@ export default async function AdminDashboardPage() {
     return (
         <div>
             <div className="flex items-center gap-2 text-xs text-on-surface/50 font-sans mb-2"><span>ADMIN</span><span>›</span><span className="text-on-surface/70">DASHBOARD</span></div>
-            <h1 className="text-3xl font-display font-bold text-primary mb-6">Panel Admin</h1>
+            <h1 className="text-2xl md:text-3xl font-display font-bold text-primary mb-6">Panel Admin</h1>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
                 <StatCard label="Total Anggota" value={totalAnggota.toString()} sublabel="pengguna aktif" />
                 <StatCard label="Pendaftar Baru" value={pendaftarBaru.toString()} sublabel="menunggu persetujuan" badge="flag-yellow" />
@@ -67,7 +67,7 @@ function StatCard(
         <Card>
             <p className="text-xs text-on-surface/50 uppercase tracking-wide mb-1">{label}</p>
             <div className="flex items-baseline gap-2">
-                <p className="text-3xl font-display font-bold text-primary">{value}</p>
+                <p className="text-2xl md:text-3xl font-display font-bold text-primary">{value}</p>
                 {badge && <Badge variant={badge as "flag-yellow"}>{sublabel}</Badge>}
             </div>
             {!badge && <p className="text-xs text-on-surface/50 mt-0.5">{sublabel}</p>}

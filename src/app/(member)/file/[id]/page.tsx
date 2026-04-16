@@ -55,11 +55,11 @@ export default async function FileDetailPage({ params }: { params: { id: string 
                 <span>JELAJAHI</span><span>›</span><span>MATA KULIAH</span><span>›</span>
                 <span className="text-on-surface/70 uppercase">DETAIL FILE</span>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-8">
                 <div className="lg:col-span-3">
-                    <h1 className="text-3xl font-display font-bold text-primary mb-6 leading-tight">{file.title}</h1>
+                    <h1 className="text-2xl md:text-3xl font-display font-bold text-primary mb-6 leading-tight">{file.title}</h1>
                     <div className="bg-surface-container-lowest rounded-md shadow-ambient p-6 mb-6">
-                        <div className="grid grid-cols-2 gap-y-4 gap-x-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
                             <div><p className="text-xs text-on-surface/50 uppercase tracking-wide mb-1">MATA KULIAH</p><Badge variant="subject">{file.subject || "–"}</Badge></div>
                             <div>
                                 <p className="text-xs text-on-surface/50 uppercase tracking-wide mb-1">TIPE DOKUMEN</p>

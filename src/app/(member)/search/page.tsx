@@ -80,18 +80,18 @@ function SearchContent() {
                 <span className="text-on-surface/70">PENCARIAN</span>
             </div>
 
-            <h1 className="text-3xl font-display font-bold text-primary mb-6">
+            <h1 className="text-2xl md:text-3xl font-display font-bold text-primary mb-6">
                 Pencarian
             </h1>
 
             <div className="relative max-w-lg mb-8">
-                <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface/40" />
+                <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-on-surface/40" />
                 <input
                     type="text"
                     value={query}
                     onChange={(e) => handleQueryChange(e.target.value)}
                     placeholder="Cari berdasarkan judul, mata kuliah, tipe dokumen, atau penulis..."
-                    className="w-full pl-12 pr-4 py-3 rounded-md bg-surface-container-low text-on-surface placeholder:text-on-surface/40 focus:outline-none ghost-border focus:ghost-border-focus transition-shadow duration-150"
+                    className="w-full min-h-11 pl-11 sm:pl-12 pr-4 py-2.5 sm:py-3 rounded-md bg-surface-container-low text-on-surface placeholder:text-on-surface/40 focus:outline-none ghost-border focus:ghost-border-focus transition-shadow duration-150"
                 />
             </div>
 

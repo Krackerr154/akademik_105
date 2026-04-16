@@ -91,9 +91,9 @@ export default function DrivesPage() {
                 <span className="text-on-surface/70">DRIVE USAGE</span>
             </div>
 
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
                 <div>
-                    <h1 className="text-3xl font-display font-bold text-primary mb-1">
+                    <h1 className="text-2xl md:text-3xl font-display font-bold text-primary mb-1">
                         Monitoring Drive
                     </h1>
                     <p className="text-sm text-on-surface/60">
@@ -104,6 +104,7 @@ export default function DrivesPage() {
                     variant="secondary"
                     onClick={() => fetchDrives(true)}
                     disabled={refreshing}
+                    className="w-full sm:w-auto"
                 >
                     {refreshing ? "Memuat ulang..." : "Refresh Data"}
                 </Button>
@@ -228,25 +229,25 @@ export default function DrivesPage() {
                     </h2>
                     <Card>
                         <div className="space-y-3 text-xs font-mono">
-                            <div className="flex justify-between">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                                 <span className="text-on-surface/50">Total Drive Dikonfigurasi</span>
                                 <span className="text-on-surface">{drives.length}</span>
                             </div>
-                            <div className="flex justify-between">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                                 <span className="text-on-surface/50">Drive Aktif (API OK)</span>
                                 <span className={healthyDrives === drives.length ? "text-emerald-600" : "text-red-500"}>
                                     {healthyDrives} / {drives.length}
                                 </span>
                             </div>
-                            <div className="flex justify-between">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                                 <span className="text-on-surface/50">Min. Sisa untuk Upload</span>
                                 <span className="text-on-surface">100 MB</span>
                             </div>
-                            <div className="flex justify-between">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                                 <span className="text-on-surface/50">Cache TTL</span>
                                 <span className="text-on-surface">30 menit</span>
                             </div>
-                            <div className="flex justify-between">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                                 <span className="text-on-surface/50">Load Balancing</span>
                                 <span className="text-on-surface">Most Free Space First</span>
                             </div>

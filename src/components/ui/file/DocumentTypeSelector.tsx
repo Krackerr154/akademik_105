@@ -33,7 +33,7 @@ export function DocumentTypeSelector({
         <div className={cn("flex flex-col gap-1.5", className)}>
             <label
                 htmlFor={id}
-                className="text-xs font-medium text-on-surface/60 uppercase tracking-wide"
+                className="text-[13px] font-medium text-on-surface/70 uppercase tracking-wide"
             >
                 {label}{required ? " *" : ""}
             </label>
@@ -54,7 +54,7 @@ export function DocumentTypeSelector({
             </select>
 
             {showQuickPicks && quickPicks.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pt-1">
+                <div className="hidden md:flex flex-wrap gap-1.5 pt-1">
                     {quickPicks.map((opt) => {
                         const active = value === opt.code;
                         return (
@@ -64,7 +64,7 @@ export function DocumentTypeSelector({
                                 disabled={disabled}
                                 onClick={() => onChange(opt.code)}
                                 className={cn(
-                                    "px-2 py-1 text-[11px] rounded-full border transition-colors",
+                                    "min-h-9 px-3 py-1.5 text-xs rounded-full border transition-colors",
                                     active
                                         ? "bg-secondary text-on-secondary border-secondary"
                                         : "bg-surface-container-lowest border-outline-variant/40 text-on-surface/70 hover:border-secondary/50 hover:text-secondary"

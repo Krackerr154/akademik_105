@@ -149,15 +149,15 @@ export async function GET(req: Request) {
         );
 
         const categoryPredicates: SQL[] = [];
-        for (const subjectKey of mappedSubjectKeys) {
+        mappedSubjectKeys.forEach((subjectKey) => {
             categoryPredicates.push(buildSubjectEqualsCondition(subjectKey));
-        }
+        });
 
-        for (const pattern of fallbackPatterns) {
+        fallbackPatterns.forEach((pattern) => {
             categoryPredicates.push(
                 sql`upper(${files.subject}) like ${`%${pattern.toUpperCase()}%`}`
             );
-        }
+        });
 
         if (categoryPredicates.length === 0) {
             return NextResponse.json(

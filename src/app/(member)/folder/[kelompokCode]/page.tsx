@@ -58,6 +58,7 @@ interface FilesApiMeta {
 }
 
 type ContentTab = "mata-kuliah" | "file";
+type KelompokLoadError = "unauthorized" | "forbidden" | "server" | "network";
 
 export default function KelompokFolderPage() {
     const router = useRouter();
@@ -92,6 +93,8 @@ export default function KelompokFolderPage() {
     });
     const [loadingFiles, setLoadingFiles] = useState(true);
     const [loadingKelompok, setLoadingKelompok] = useState(true);
+    const [kelompokLoadError, setKelompokLoadError] =
+        useState<KelompokLoadError | null>(null);
 
     const [docTypeOptions, setDocTypeOptions] = useState<DocumentTypeOption[]>(
         DEFAULT_DOCUMENT_TYPE_OPTIONS
@@ -134,9 +137,24 @@ export default function KelompokFolderPage() {
 
         const fetchKelompok = async () => {
             setLoadingKelompok(true);
+            setKelompokLoadError(null);
             try {
                 const res = await fetch("/api/kelompok");
-                if (!res.ok) return;
+                if (!res.ok) {
+                    if (alive) {
+                        setKelompokCards([]);
+                        setSubjectCards([]);
+
+                        if (res.status === 401) {
+                            setKelompokLoadError("unauthorized");
+                        } else if (res.status === 403) {
+                            setKelompokLoadError("forbidden");
+                        } else {
+                            setKelompokLoadError("server");
+                        }
+                    }
+                    return;
+                }
 
                 const data = await res.json();
 
@@ -169,6 +187,11 @@ export default function KelompokFolderPage() {
                 }
             } catch (err) {
                 console.error("Gagal memuat kelompok:", err);
+                if (alive) {
+                    setKelompokCards([]);
+                    setSubjectCards([]);
+                    setKelompokLoadError("network");
+                }
             } finally {
                 if (alive) setLoadingKelompok(false);
             }
@@ -357,7 +380,28 @@ export default function KelompokFolderPage() {
         updateSubjectQuery("");
     };
 
-    const isInvalidKelompok = !loadingKelompok && !selectedCard;
+    const kelompokErrorMessage = useMemo(() => {
+        if (kelompokLoadError === "unauthorized") {
+            return "Sesi login berakhir. Silakan masuk ulang untuk memuat data kelompok.";
+        }
+
+        if (kelompokLoadError === "forbidden") {
+            return "Akun Anda tidak memiliki izin untuk membuka data kelompok.";
+        }
+
+        if (kelompokLoadError === "network") {
+            return "Koneksi ke server bermasalah saat memuat data kelompok.";
+        }
+
+        if (kelompokLoadError === "server") {
+            return "Server gagal memuat data kelompok. Coba lagi beberapa saat.";
+        }
+
+        return "";
+    }, [kelompokLoadError]);
+
+    const isInvalidKelompok =
+        !loadingKelompok && kelompokLoadError === null && !selectedCard;
 
     return (
         <div>
@@ -396,12 +440,42 @@ export default function KelompokFolderPage() {
                 <Card>
                     <p className="text-sm text-on-surface/60">Memuat data kelompok...</p>
                 </Card>
+            ) : kelompokLoadError ? (
+                <Card className="space-y-3">
+                    <p className="text-sm text-on-surface/70">{kelompokErrorMessage}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {(kelompokLoadError === "server" ||
+                            kelompokLoadError === "network") && (
+                            <Button size="sm" onClick={() => window.location.reload()}>
+                                Coba Muat Ulang
+                            </Button>
+                        )}
+                        {kelompokLoadError === "unauthorized" && (
+                            <Button size="sm" onClick={() => router.push("/login")}>
+                                Masuk Ulang
+                            </Button>
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => router.push("/")}
+                            className="min-h-11 px-3 py-1.5 text-sm rounded-md bg-surface-container-low text-on-surface/70 hover:text-on-surface transition-colors"
+                        >
+                            Kembali ke Jelajahi
+                        </button>
+                    </div>
+                </Card>
             ) : isInvalidKelompok ? (
                 <Card className="space-y-3">
                     <p className="text-sm text-on-surface/70">
-                        Kelompok tidak ditemukan atau tidak aktif.
+                        Kode kelompok
+                        <span className="font-mono"> {kelompokCodeFromRoute || "-"}</span>
+                        tidak ditemukan atau sedang tidak aktif.
                     </p>
-                    <div>
+                    <p className="text-xs text-on-surface/55">
+                        Periksa tautan yang dibuka, lalu pilih ulang kelompok dari halaman
+                        jelajah.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
                         <Button size="sm" onClick={() => router.push("/")}>
                             Kembali ke Jelajahi
                         </Button>

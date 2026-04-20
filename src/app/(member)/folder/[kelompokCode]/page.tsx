@@ -467,9 +467,9 @@ export default function KelompokFolderPage() {
             ) : isInvalidKelompok ? (
                 <Card className="space-y-3">
                     <p className="text-sm text-on-surface/70">
-                        Kode kelompok
+                        Kode kelompok{" "}
                         <span className="font-mono"> {kelompokCodeFromRoute || "-"}</span>
-                        tidak ditemukan atau sedang tidak aktif.
+                        {" "}tidak ditemukan atau sedang tidak aktif.
                     </p>
                     <p className="text-xs text-on-surface/55">
                         Periksa tautan yang dibuka, lalu pilih ulang kelompok dari halaman

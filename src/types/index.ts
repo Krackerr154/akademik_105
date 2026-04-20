@@ -283,7 +283,12 @@ export const DEFAULT_KELOMPOK_CARD_OPTIONS: KelompokCardOption[] = [
 ];
 
 export function normalizeKelompokCode(input: string): string {
-    return input.trim().replace(/\s+/g, " ").toUpperCase().replace(/[^A-Z0-9 ]/g, "").replace(/ /g, "_");
+    return input
+        .trim()
+        .replace(/\s+/g, " ")
+        .toUpperCase()
+        .replace(/[^A-Z0-9_ ]/g, "")
+        .replace(/ /g, "_");
 }
 
 export function normalizeSubjectKey(input: string): string {

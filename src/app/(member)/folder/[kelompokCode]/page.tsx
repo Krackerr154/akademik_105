@@ -484,24 +484,64 @@ export default function KelompokFolderPage() {
             ) : (
                 <>
                     <div className="mb-6">
-                        <div
-                            role="tablist"
-                            aria-label="Drive browsing tabs"
-                            className="inline-flex items-center rounded-md bg-surface-container-low p-1"
-                        >
-                            <DriveTabButton
-                                label="Mata Kuliah"
-                                selected={contentTab === "mata-kuliah"}
-                                count={selectedKelompokSubjects.length}
-                                onClick={() => setContentTab("mata-kuliah")}
-                            />
+                        <div className="inline-flex max-w-full flex-wrap items-center gap-2 rounded-md bg-surface-container-low p-1">
+                            <button
+                                type="button"
+                                onClick={clearSubjectSelection}
+                                aria-label="Kembali ke daftar mata kuliah"
+                                className={`min-h-11 px-3 py-1.5 rounded-sm text-sm font-medium transition-colors inline-flex items-center gap-2 ${
+                                    selectedSubjectCard
+                                        ? "bg-surface-container-lowest text-secondary hover:opacity-90"
+                                        : "bg-surface-container-lowest text-on-surface/80"
+                                }`}
+                            >
+                                {selectedSubjectCard && (
+                                    <span className="text-on-surface/45">←</span>
+                                )}
+                                <span className="max-w-[14rem] truncate">
+                                    {selectedCard?.name}
+                                </span>
+                                <span className="text-[11px] font-mono opacity-80">
+                                    {selectedKelompokSubjects.length}
+                                </span>
+                            </button>
+
                             {selectedSubjectCard && (
-                                <DriveTabButton
-                                    label="File"
-                                    selected={contentTab === "file"}
-                                    count={totalFiles}
-                                    onClick={() => setContentTab("file")}
-                                />
+                                <div className="relative inline-flex min-h-11 items-center gap-2 rounded-sm bg-surface-container-lowest px-3 py-1.5 text-secondary">
+                                    <span className="text-on-surface/35">›</span>
+                                    <span className="max-w-[16rem] truncate text-sm font-medium">
+                                        {selectedSubjectCard.subjectLabel}
+                                    </span>
+                                    <span className="text-[11px] font-mono opacity-80">
+                                        {totalFiles}
+                                    </span>
+                                    <span className="text-xs opacity-70">▼</span>
+                                    <label htmlFor="subject-switcher" className="sr-only">
+                                        Pilih mata kuliah
+                                    </label>
+                                    <select
+                                        id="subject-switcher"
+                                        value={selectedSubjectKey}
+                                        onChange={(e) => {
+                                            const nextKey = normalizeSubjectKey(
+                                                (e.target as HTMLSelectElement).value
+                                            );
+                                            if (!nextKey) return;
+                                            handleSelectSubject(nextKey);
+                                        }}
+                                        className="absolute inset-0 cursor-pointer opacity-0"
+                                        aria-label="Ganti mata kuliah"
+                                    >
+                                        {selectedKelompokSubjects.map((subject) => (
+                                            <option
+                                                key={subject.subjectKey}
+                                                value={subject.subjectKey}
+                                            >
+                                                {subject.subjectLabel}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -566,38 +606,8 @@ export default function KelompokFolderPage() {
 
                     {selectedSubjectCard && contentTab === "file" && (
                         <>
-                            <div className="mb-4 text-sm md:text-xs text-on-surface/60">
-                                Menampilkan: <span className="font-semibold text-primary">{selectedCard?.name}</span>
-                                <span> › </span>
-                                <span className="font-semibold text-primary">
-                                    {selectedSubjectCard.subjectLabel}
-                                </span>
-                            </div>
-
                             <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-6 gap-3">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:items-center gap-3 w-full md:w-auto">
-                                    <Select
-                                        options={[
-                                            { value: "", label: "Semua Mata Kuliah" },
-                                            ...selectedKelompokSubjects.map((s) => ({
-                                                value: s.subjectKey,
-                                                label: s.subjectLabel,
-                                            })),
-                                        ]}
-                                        label="MATA KULIAH"
-                                        value={selectedSubjectKey}
-                                        onChange={(e) => {
-                                            const nextKey = normalizeSubjectKey(
-                                                (e.target as HTMLSelectElement).value
-                                            );
-                                            if (!nextKey) {
-                                                clearSubjectSelection();
-                                                return;
-                                            }
-                                            handleSelectSubject(nextKey);
-                                        }}
-                                        className="w-full sm:w-56"
-                                    />
                                     <Select
                                         options={[
                                             { value: "", label: "Semua Tipe Dokumen" },
@@ -759,35 +769,6 @@ function GridIcon({ className }: { className?: string }) {
             <rect x="3" y="14" width="7" height="7" />
             <rect x="14" y="14" width="7" height="7" />
         </svg>
-    );
-}
-
-function DriveTabButton({
-    label,
-    count,
-    selected,
-    onClick,
-}: {
-    label: string;
-    count: number;
-    selected: boolean;
-    onClick: () => void;
-}) {
-    return (
-        <button
-            type="button"
-            role="tab"
-            aria-selected={selected}
-            onClick={onClick}
-            className={`min-h-11 px-3 py-1.5 rounded-sm text-sm font-medium transition-colors inline-flex items-center gap-2 ${
-                selected
-                    ? "bg-surface-container-lowest text-secondary"
-                    : "text-on-surface/60 hover:text-on-surface"
-            }`}
-        >
-            <span>{label}</span>
-            <span className="text-[11px] font-mono opacity-80">{count}</span>
-        </button>
     );
 }
 
